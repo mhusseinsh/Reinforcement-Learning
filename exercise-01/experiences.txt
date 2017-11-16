@@ -1,0 +1,12 @@
+Experiences
+
+experience with this exercise:
+- We could solve Exercise 2 quickler than exercise 1 because it was clear, and understandable.
+  We also used our knowledge of AI as a complement for solving it; besides using the formulas presented in the lecture. 
+  Therefore, we did not spend much time.
+-Explanations and concept of the first question was not clear enough to understand it easily and start solving the question right after, specifically a), b) and c). 
+ It took very long time to understand what to do despite all the talk about it at the lecture.  
+-Exercise 1c was the one which we spend much time, because: 
+ 	At first, it was complicated to understand. 
+	After asking to the tutors our specific doubts, then we could propose a solution.
+  	However, the latter was also time consuming. 

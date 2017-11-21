@@ -1,0 +1,53 @@
+-------
+Exercise 01
+-------
+1 (a):
+
+1 (b):
+
+1 (c):
+Please comment the code properly. Instead of putting in cryptic code like:
+if task_pointer != 3:
+and making me figure out after reading all the code what task_pointer is doing exactly.
+Why is horizon_check incremented twice, I still don't get it.
+You wrote:
+"	if count_fail == 4:"
+Acc. to task 1 (b), you know that you can fail even if you fail at 3 tasks and solve 1. This seems wrong.
+You don't need to use random sampling, it really seems to make your program stochastic.
+In fact, I get different values every time I run it. (-3 pts)
+
+1 (d):
+A is actually a stationary policy (it solves in the same order, irrespective of the time step).
+You are not allowed to change to an infinite horizon. The task was defined for N = 5.
+Stationary policy doesn't necessarily mean that the horizon is infinite. (-2 pts)
+
+1 (e):
+Overly complicated explanation.
+
+1 (f):
+No explanation and wrong answer. (-2 pts)
+
+-------
+Overall for task 1: 5 pts
+-------
+
+2 (b):
+That doesn't explain what was asked for in the task.
+Also, it is wrong. The value of a state depends on the next state, not necessarily on neighbouring states. (-3 pts)
+
+2 (c):
+Values are wrong. You are supposed to derive for OPTIMAL policy not uniform random policy.
+Additionally, it's wrongly derived even for uniform random policy. The next states of A and B under this policy would converge to different values once the reward of A -> A' changes (-2 pts)
+However, the new optimal policy you have drawn is correct.
+
+-------
+Overall for task 2: 3 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 01: 9/20 pts
+--------------

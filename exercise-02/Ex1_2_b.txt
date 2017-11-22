@@ -1,0 +1,27 @@
+Value Iteration function takes an array of zeros as an initiating value function, 
+then for each state, computes all possible action values in order to choose the one with the 
+highest utility (greedy manner, by using Bellman Optimality Equation). It chooses the one with maximum, then moves to the next state. This operation introduces non-linearity to Value Iteration. 
+On each new advancing on states, an improved value function is found, which yields the 
+optimal value function at the end. It stops advancing by checking the convergence control which is done at the end of each advancing on states. 
+
+So at the end, we find the highest possible state values by computing action values recursively, 
+which is the optimal value function. Then having an optimal value function helps building an 
+optimal policy if we want to have it. But we need to advance only one time for the optimal policy, 
+and we will use our optimal value-function, instead of using the one initiated with zeros.
+
+Policy Iteration has two main steps;
+1-Policy Evaluation: Starts with Policy Evaluation which computes recursively the state values of the current policy, and returns a value function at the end. Policy Evaluation computes the state values using 
+the Bellman Expectation Function, until the state values stop changing (i.e., we average over 
+the policy distribution, rather than only getting the greedy action))
+
+2- Policy Improvement: Then Policy Iteration takes the value-function coming from Policy Evaluation, and starts 
+improving it by computing action-values for each state, and chooses the action with the maximum action-value greedily. 
+Then checks whether the action that is given by the new policy is better than the one we used for Policy Evaluation for
+the same state. If so, it changes the policy action at that state with the newly computed one.
+
+So, in Policy Improvement, we start with a random policy, then find the value function of that policy (Policy Evaluation Step), then find an new (policy improvement step) policy based on the previous value function, and so on. In this process, each policy is guaranteed to be a strict improvement over the previous one (unless it is already optimal). Given a policy, its value function can be obtained using the Bellman operator.
+
+
+
+In some sense, both algorithms share the same working principle, and they can be seen as two cases of the Generalized Policy Iteration. However, the Bellman Optimality Equation contains a max operator, which is non linear and, therefore, it has different features. In addition, it's possible to use hybrid methods between pure Value Iteration and pure Policy Iteration.
+

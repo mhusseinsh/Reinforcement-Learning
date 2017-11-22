@@ -1,13 +1,13 @@
 import unittest
 import numpy as np
 import sys
-if "../../" not in sys.path:
-  sys.path.append("../../")
-from lib.envs.gridworld import GridworldEnv
-if "../" not in sys.path:
-  sys.path.append("../")
-from scripts import policy_iteration
-from scripts import value_iteration
+if "../../lib/envs/" not in sys.path:
+    sys.path.append("../../lib/envs/")
+from gridworld import GridworldEnv
+if "../scripts/" not in sys.path:
+    sys.path.append("../scripts/")
+import policy_iteration
+import value_iteration
 
 def setUpModule():
   global env

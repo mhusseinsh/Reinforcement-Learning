@@ -1,0 +1,4 @@
+This exercise was easier to understand than the last one. Since we were familiar with the value iteration and 
+policy iteration concepts we only spent time for make our scripts work, which took a long time to implement.
+But once we learnt the environment and its features, it was easier.
+We also could understand better the formulas from the lectures MDP and dynammic programming.

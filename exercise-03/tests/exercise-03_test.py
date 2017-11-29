@@ -422,7 +422,7 @@ class TestMCEvaluation(unittest.TestCase):
     self.assert_float_dict_almost_equal(expected_V_500k, V_500k, decimal=2)
 
   def assert_float_dict_almost_equal(self, a, b, decimal=6):
-    for key_pair in zip(a, b):
+    for key_pair in zip(sorted(a), sorted(b)):
       self.assertTupleEqual(key_pair[0], key_pair[1])
       self.assertAlmostEqual(a[key_pair[0]], b[key_pair[1]], places=decimal)
 

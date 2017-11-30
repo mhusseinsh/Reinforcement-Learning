@@ -1,0 +1,8 @@
+When we first started to work on this assignment, we had problems with implementation 
+of the MC formula, for 1.a.
+After a while we got, and the rest was smooth. 
+For the second part of the assignment, we had to change the formula that we applied for 
+the first question, that was a little confusing.
+After understanding what to do, and getting to know the BlackJack environment, it was okay. 
+We had a hard time with understanding what was wrong about our solution because of the
+unit test problem. It took some time to find out that our implementation was in fact correct.

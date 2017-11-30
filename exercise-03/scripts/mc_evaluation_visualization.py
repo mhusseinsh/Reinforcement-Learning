@@ -4,9 +4,9 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mc_evaluation import mc_evaluation
 import sys
-if "../../" not in sys.path:
-  sys.path.append("../../")
-from lib.envs.blackjack import BlackjackEnv
+if "../../lib/envs/" not in sys.path:
+  sys.path.append("../../lib/envs/")
+from blackjack import BlackjackEnv
 
 def plot_value_function(V, axarr, title="Value Function"):
   """

@@ -220,7 +220,7 @@ class TestMCControl(unittest.TestCase):
     self.assert_float_dict_almost_equal(expected_q_values, Q, decimal=2)
   
   def assert_float_dict_almost_equal(self, a, b, decimal=6):
-    for key_pair in zip(a, b):
+    for key_pair in zip(sorted(a), sorted(b)):
       self.assertTupleEqual(key_pair[0], key_pair[1])
       np.testing.assert_array_almost_equal(a[key_pair[0]], b[key_pair[1]], decimal=decimal)
 
@@ -787,7 +787,7 @@ class TestQLearning(unittest.TestCase):
     np.testing.assert_array_almost_equal(self.stats[1], expected_reward, decimal=2)
 
   def assert_float_dict_almost_equal(self, a, b, decimal=6):
-    for key_pair in zip(a, b):
+    for key_pair in zip(sorted(a), sorted(b)):
       self.assertEqual(key_pair[0], key_pair[1])
       np.testing.assert_array_almost_equal(a[key_pair[0]], b[key_pair[1]], decimal=decimal)
 

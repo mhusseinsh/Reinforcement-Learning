@@ -1,0 +1,43 @@
+-------
+Exercise 02
+-------
+1.1 (a):
+Correct!
+
+1.1 (b):
+Correct!
+
+-------
+Overall for task 1: 12 pts
+-------
+
+1.2 (a):
+Correct!
+
+1.2 (b):
+You said:
+"It chooses the one with maximum, then moves to the next state."
+It can update all states in parallel, it doesn't need to do it sequentially.
+
+You said:
+"On each new advancing on states"
+It'd be better to say "on each iterative update" or something similar. I'm not sure "advancing" is the term used generally.
+
+You said:
+"But we need to advance only one time for the optimal policy,"
+I didn't completely understand, but I think you meant that we can get the optimal policy in 1 update loop from the optimal value function. You've done it correctly in code anyway.
+
+-------
+Overall for task 2: 8 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 02: 21/20 pts
+--------------
+
+Very well done!
+It's really nice of you that you commented so much.

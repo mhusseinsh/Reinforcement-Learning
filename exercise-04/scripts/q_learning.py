@@ -1,4 +1,8 @@
-from collections import defaultdict
+import sys
+import numpy as np
+from collections import defaultdict, namedtuple
+
+EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
 
 def make_epsilon_greedy_policy(Q, epsilon, nA):
   """
@@ -43,7 +47,7 @@ def q_learning(env, num_episodes, discount_factor=1.0, alpha=0.5, epsilon=0.1):
   Q = defaultdict(lambda: np.zeros(env.action_space.n))
 
   # Keeps track of useful statistics
-  stats = plotting.EpisodeStats(
+  stats = EpisodeStats(
     episode_lengths=np.zeros(num_episodes),
     episode_rewards=np.zeros(num_episodes))    
   

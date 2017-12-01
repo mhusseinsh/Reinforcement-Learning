@@ -35,7 +35,7 @@ def create_greedy_policy(Q):
 
 def mc_control_importance_sampling(env, num_episodes, behavior_policy, discount_factor=1.0):
   """
-  Monte Carlo Control Off-Policy Control using Weighted Importance Sampling.
+  Monte Carlo Control Off-Policy Control using Importance Sampling.
   Finds an optimal greedy policy.
   
   Args:

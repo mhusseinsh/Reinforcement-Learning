@@ -1,0 +1,37 @@
+-------
+Exercise 03
+-------
+No submission for task 1. Did you forget to upload?
+
+1 (a):
+
+1 (b):
+
+1 (c):
+
+-------
+Overall for task 1: 0 pts
+-------
+
+2:
+Correct!
+
+You have done:
+  while (i <= 200):
+I don't think the number of states is 200. I think you considered possible values of the player's current sum and the dealer's one showing card, but did you consider the possible values of usable ace as well? That will easily double the total number of possible states. In any case, you have the exit condition in line 53:
+  if done == True:
+why not use that to terminate the while loop?
+
+-------
+Overall for task 2: 10 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 02: 11/20 pts
+--------------
+
+Please submit all files on time.

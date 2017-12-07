@@ -1,14 +1,15 @@
 import unittest
 import numpy as np
 import sys
-if "../../" not in sys.path:
-  sys.path.append("../../")
-from lib.envs.blackjack import BlackjackEnv
-from lib.envs.cliff_walking import CliffWalkingEnv
-if "../" not in sys.path:
-  sys.path.append("../")
-from scripts.q_learning import q_learning
-from scripts.off_policy_mc import create_random_policy, mc_control_importance_sampling
+if "../../lib/envs/" not in sys.path:
+  sys.path.append("../../lib/envs/")
+from blackjack import BlackjackEnv
+from cliff_walking import CliffWalkingEnv
+if "../scripts/" not in sys.path:
+  sys.path.append("../scripts/")
+
+from q_learning import q_learning
+from off_policy_mc import create_random_policy, mc_control_importance_sampling
 
 class TestMCControl(unittest.TestCase):
   def test_q_values(self):

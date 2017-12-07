@@ -7,10 +7,13 @@ from collections import defaultdict
 from q_learning import q_learning
 from off_policy_mc import create_random_policy, mc_control_importance_sampling
 import sys
-if "../../" not in sys.path:
-  sys.path.append("../../")
-from lib.envs.blackjack import BlackjackEnv
-from lib.envs.cliff_walking import CliffWalkingEnv
+if "../../lib/envs/" not in sys.path:
+  sys.path.append("../../lib/envs/")
+from blackjack import BlackjackEnv
+from cliff_walking import CliffWalkingEnv
+
+from q_learning import q_learning
+from off_policy_mc import create_random_policy, mc_control_importance_sampling
 
 def plot_value_function(V, axarr, title="Value Function"):
   """

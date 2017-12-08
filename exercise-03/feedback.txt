@@ -3,14 +3,26 @@ Exercise 03
 -------
 No submission for task 1. Did you forget to upload?
 
-1 (a):
+Added feedback for delayed submission:
+1 (a): (3.5 pts) out of 6
+You calculated V(S_2,5) in 1st episode. It's not right. You already received 10 on transition from (2,4) to (2,5). So, G_t for S_2,5 would not be calculated, as there is no transition from S_2,5 and therefore no R_t+1.
+Similar mistake for V(S_3,3) in 2nd episode and V(S_2,5) in 3rd.
+Calculation mistakes in 3rd episode. You did 97*6, it should be 97*3. Similar mistakes later.
+You calculated V(S_2,4) 2 times. That's wrong. It's 1st visit MC. 1st visit value was correctly calculated.
 
-1 (b):
+1 (b): (1.5 pts) out of 2
+Because of previous mistakes, the 1st TD error is wrong.
+You didn't need to calculate 'V's in 1(b).
+Wrong calculation for delta_t for V(S_1,5): you added -1 which was not needed. Extra calculation for delta_t for V(S_2,5). This leads to last 2 'delta_t's being wrong in next step (One is extra, one is wrong).
 
-1 (c):
+1 (c): (1 pt) out of 2
+For TD(0), when lambda=0, it will be 0^0 which is taken equal to 1, not 0.
+Extra and wrong 'delta_t's = -1 as mentioned above.
+So values are all wrong because of previous mistakes, although way of calculation is correct.
 
+Delayed submission. (-2 pts)
 -------
-Overall for task 1: 0 pts
+Overall for task 1: 4 pts
 -------
 
 2:
@@ -31,7 +43,10 @@ Bonus: 1pt
 -------
 
 --------------
-Overall for exercise 02: 11/20 pts
+Overall for exercise 02: 15/20 pts
 --------------
 
 Please submit all files on time.
+
+In case of any questions, please feel free to contact me at rajanr@cs.uni-freiburg.de.
+Raghu.

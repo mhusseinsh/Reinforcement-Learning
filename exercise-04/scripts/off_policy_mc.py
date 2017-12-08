@@ -85,7 +85,7 @@ def mc_control_importance_sampling(env, num_episodes, behavior_policy, discount_
 		while (i <= 200):
 			# After folling the given sample policy we find the action that we should take
 			probabilities = behavior_policy(state)
-			action=np.random.choice(np.arange(len(probabilities)),p=probabilities)
+			action=np.random.choice(np.arange(len(probabilities)), p=probabilities)
 			# We take the action: stick (0) or twist (1). We get the relevant information from the environment.
 			next_state, reward, done, _ = env.step(action)
 			# We need to store all information that we got in an episode for further usage
@@ -136,10 +136,12 @@ def mc_control_importance_sampling(env, num_episodes, behavior_policy, discount_
 			# Update G according to importance sampling
 			G_pi_mu = (prob_greedy/prob_behavior) * G
 
+			returns_sum[sa_pair] += G_pi_mu
+
 			# Count how many times this state-action visited
 			returns_count[sa_pair] += 1.0
 
 			# Update the action value function based on the running mean and the weighted sum of rewards
-			Q[e_state][e_action]=Q[e_state][e_action]+(1.0/returns_count[sa_pair])*(G_pi_mu-Q[e_state][e_action])
+			Q[e_state][e_action] = returns_sum[sa_pair] / returns_count[sa_pair]
 
 	return Q, target_policy

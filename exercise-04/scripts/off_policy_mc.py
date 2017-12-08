@@ -141,7 +141,7 @@ def mc_control_importance_sampling(env, num_episodes, behavior_policy, discount_
 			# Count how many times this state-action visited
 			returns_count[sa_pair] += 1.0
 
-			# Update the action value function based on the running mean and the weighted sum of rewards
+			# Update the action value function based on the running mean and the weighted sum o f rewards
 			Q[e_state][e_action] = returns_sum[sa_pair] / returns_count[sa_pair]
 
 	return Q, target_policy

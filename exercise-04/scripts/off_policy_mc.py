@@ -82,7 +82,7 @@ def mc_control_importance_sampling(env, num_episodes, behavior_policy, discount_
 		# and a binary return for whether the player could use an ace as 10 or 1
 		state = env.reset()
 		# There are 200 possible states, so we thought we can limit the actions in one episode to 200. It can take less or more.
-		while (i <= 200):
+		while (1):
 			# After folling the given sample policy we find the action that we should take
 			probabilities = behavior_policy(state)
 			action=np.random.choice(np.arange(len(probabilities)), p=probabilities)

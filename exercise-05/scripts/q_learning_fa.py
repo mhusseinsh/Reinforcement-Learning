@@ -34,9 +34,9 @@ class NeuralNetwork():
 		# TODO: Implement this!
 
 		self.x = tf.placeholder(shape=[None, 2], dtype=tf.float32)
-		self.y = tf.placeholder(shape=[env.action_space.n, 1], dtype=tf.float32)
+		self.y = tf.placeholder(shape=[None, env.action_space.n], dtype=tf.float32)
 
-		self.actions = tf.placeholder(shape=[1,1], dtype=tf.int32)
+		self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
 
 		self.fc1 = tf.contrib.layers.fully_connected(self.x, 20, activation_fn=tf.nn.relu)
 		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu)
@@ -47,7 +47,7 @@ class NeuralNetwork():
 		self.losses = tf.losses.mean_squared_error([all_actions], self.y, reduction =tf.losses.Reduction.NONE)
 		self.loss = tf.reduce_mean(self.losses)
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.003)
+		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.005)
 		self.train_op = self.optimizer.minimize(self.loss)
 
 		init = tf.global_variables_initializer()
@@ -61,7 +61,7 @@ class NeuralNetwork():
 			The prediction of the output tensor.
 		"""
 		# TODO: Implement this!
-		prediction = sess.run(self.y, { self.x: np.array(states)})
+		prediction = sess.run(self.y, { self.x: states})
 		return prediction
 
 	def update(self, sess, states, actions, targets):
@@ -76,7 +76,7 @@ class NeuralNetwork():
 			targets: [current_target] or targets of batch
 		"""
 			# TODO: Implement this!
-		feed_dict = { self.x: np.array(states), self.actions: np.array(actions).reshape(1,1), self.y: np.array(targets) }
+		feed_dict = { self.x: states, self.actions: actions, self.y: targets }
 		_, loss = sess.run([self.train_op, self.loss],feed_dict)
 
 		return loss
@@ -149,7 +149,7 @@ def make_epsilon_greedy_policy(estimator, epsilon, nA):
 		return A
 	return policy_fn
 
-def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.1, epsilon=0.01, use_experience_replay=False, batch_size=128, target=None):
+def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.99, epsilon=0.1, use_experience_replay=False, batch_size=128, target=None):
 	"""
 	Q-Learning algorithm for off-policy TD control using Function Approximation.
 	Finds the optimal greedy policy while following an epsilon-greedy policy.
@@ -221,7 +221,8 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.next_batch(batch_size)
 
 				# Get action values for the state that we are in
-				q_values_next = approx.predict(sess, [next_state])
+				#q_values_next = approx.predict(sess, [next_state])
+				q_values_next = target.predict(sess, [next_state])
 
 				# Get the action values of the batch_states from the target network
 				q_values_next_target = target.predict(sess, batch_next_states)
@@ -232,9 +233,13 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				targets_batch = batch_rewards + discount_factor * q_values_next_target[np.arange(batch_size), best_actions]
 				q_values_next_target[0][best_actions] = targets_batch
 
+				#for i in batch_size:
+				#	targets[i] = batch_rewards[i]+discount_factor*q_values_next_target[i, best_actions]
+				#q_values_next_target[action][]
 				# Compute the loss between Q-target and Q-network
-				for i in range(batch_size):
-					loss = approx.update(sess, [state], [action], [q_values_next_target[i]])
+				#for i in range(batch_size):
+				#	loss = approx.update(sess, [state], [action], [q_values_next_target[i]])
+				loss = approx.update(sess, batch_states, batch_actions, q_values_next_target)
 
 			else:
 			  	# Now we consider that we are in the next state, and we look further from the view of the 
@@ -293,8 +298,8 @@ if __name__ == "__main__":
 	sess = tf.Session()
 	sess.run(tf.global_variables_initializer())
 	# Choose one.
-	#stats = q_learning(sess, env, approx, 500, 500)
-	stats = q_learning(sess, env, approx, 100, 300, use_experience_replay=True, batch_size=30, target=target)
+	#stats = q_learning(sess, env, approx, 3000, 1000)
+	stats = q_learning(sess, env, approx, 1000, 1000, use_experience_replay=True, batch_size=128, target=target)
 	plot_episode_stats(stats)
 
 	for _ in range(100):

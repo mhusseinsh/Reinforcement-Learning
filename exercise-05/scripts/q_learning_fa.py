@@ -210,7 +210,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 			stats.episode_lengths[i_episode] = t
 
 			# Stop if the max_time_per_episode is reached
-			print("episode length check",stats.episode_lengths[i_episode])
 			if stats.episode_lengths[i_episode] == max_time_per_episode:
 				break
 
@@ -223,10 +222,10 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 				# Get action values for the state that we are in
 				#q_values_next = approx.predict(sess, [next_state])
-				q_values_next = target.predict(sess, batch_states)
+				q_values_states = target.predict(sess, batch_states)
 
 				# Get the action values of the batch_states from the target network
-				q_values_next_target = target.predict(sess, batch_next_states)
+				q_values_next_states = target.predict(sess, batch_next_states)
 
 				# Find the best actions of each state of the batch
 				#best_actions = np.argmax(q_values_next_target,1)
@@ -235,14 +234,16 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				#q_values_next_target[0][best_actions] = targets_batch
 
 				for i in batch_states:
-					q_next_i = q_values_next_target[i]
-					max_action = np.argmax(q_next_i)
+					q_next = q_values_next_states[i]
+					max_action = np.argmax(q_next)
 					if done:
 						target = batch_rewards[i]
 					else:
-						target = batch_rewards[i]+discount_factor*q_values_next_target[max_action]
-					q_values_next[i][batch_actions[i]]=target
-				loss = approx.update(sess, batch_states, batch_actions, q_values_next)
+						target = batch_rewards[i]+discount_factor * q_values_next_states[max_action]
+
+					q_values_states[i][batch_actions[i]]=target
+
+				loss = approx.update(sess, batch_states, batch_actions, q_values_states)
 				#	targets[i] = batch_rewards[i]+discount_factor*q_values_next_target[i, best_actions]
 				#	q_values_next_target[action] = target
 				# Compute the loss between Q-target and Q-network

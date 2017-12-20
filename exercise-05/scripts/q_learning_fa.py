@@ -47,7 +47,7 @@ class NeuralNetwork():
 		self.losses = tf.losses.mean_squared_error([all_actions], self.y, reduction =tf.losses.Reduction.NONE)
 		self.loss = tf.reduce_mean(self.losses)
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.005)
+		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 		self.train_op = self.optimizer.minimize(self.loss)
 
 		init = tf.global_variables_initializer()
@@ -149,7 +149,7 @@ def make_epsilon_greedy_policy(estimator, epsilon, nA):
 		return A
 	return policy_fn
 
-def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.5, epsilon=0.1, use_experience_replay=False, batch_size=128, target=None):
+def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.99, epsilon=0.1, use_experience_replay=False, batch_size=128, target=None):
 	"""
 	Q-Learning algorithm for off-policy TD control using Function Approximation.
 	Finds the optimal greedy policy while following an epsilon-greedy policy.
@@ -190,7 +190,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
 	tn = target
-	flag = False
 	for i_episode in range(num_episodes):
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
@@ -201,9 +200,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 		# TODO: Implement this!
 		state = env.reset()
 		for t in itertools.count():
-			if flag == True:
-				print("CHECK2")
-			flag = False
 			# Take an epsilon greedy step
 			action_probs = policy(sess, state)
 			action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
@@ -215,8 +211,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 			# Stop if the max_time_per_episode is reached
 			if (stats.episode_lengths[i_episode] + 1) == max_time_per_episode:
-				print("CHECK1")
-				flag = True
 				break
 
 			if(use_experience_replay):

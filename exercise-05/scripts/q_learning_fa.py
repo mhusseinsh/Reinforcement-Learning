@@ -33,23 +33,27 @@ class NeuralNetwork():
 		"""
 		# TODO: Implement this!
 
+		# Create placeholders for inout, output and actions of the network 
 		self.x = tf.placeholder(shape=[None, 2], dtype=tf.float32)
 		self.y = tf.placeholder(shape=[None, env.action_space.n], dtype=tf.float32)
-
 		self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
 
+		# Create fully connected layers such that one is the others's input
 		self.fc1 = tf.contrib.layers.fully_connected(self.x, 20, activation_fn=tf.nn.relu)
 		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu)
 
 		# Output layer will have linear activation with "activation_fn=None"
 		self.y = tf.contrib.layers.fully_connected(self.fc2, env.action_space.n, activation_fn=None)
 
+		# Prepare loss by using mean squared error
 		self.losses = tf.losses.mean_squared_error([all_actions], self.y, reduction =tf.losses.Reduction.NONE)
 		self.loss = tf.reduce_mean(self.losses)
 
+		# Use Adam as optimizer
 		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 		self.train_op = self.optimizer.minimize(self.loss)
 
+		# Initiate global variables
 		init = tf.global_variables_initializer()
 
 	def predict(self, sess, states):
@@ -76,7 +80,11 @@ class NeuralNetwork():
 			targets: [current_target] or targets of batch
 		"""
 			# TODO: Implement this!
+
+		# Get input (states), labels (actions), and predictions (targets) 
 		feed_dict = { self.x: states, self.actions: actions, self.y: targets }
+
+		# Compute loss and update
 		_, loss = sess.run([self.train_op, self.loss],feed_dict)
 
 		return loss
@@ -178,15 +186,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 	# The policy we're following
 	policy = make_epsilon_greedy_policy(approx, epsilon, 3)
 
-	# if(use_experience_replay):
-	# 	for i in range(5000):
-	# 		state = env.reset()
-	# 		action_probs = policy(sess, state)
-	# 		action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-	# 		next_state, reward, done, _ = env.step(all_actions[action])
-	# 		# Save transition to replay memory
-	# 		replay_memory.add_transition(state, action, next_state, reward, done)
-
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
 	tn = target
@@ -220,54 +219,52 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				# Sample a minibatch from the replay memory
 				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.next_batch(batch_size)
 
-				# Get action values for the state that we are in
-				#q_values_next = approx.predict(sess, [next_state])
+				# Get action values of batch_states
 				q_values_states = tn.predict(sess, batch_states)
 
-				# Get the action values of the batch_states from the target network
+				# Get the action values of batch_next_states
 				q_values_next_states = tn.predict(sess, batch_next_states)
 
-				# Find the best actions of each state of the batch
-				#best_actions = np.argmax(q_values_next_target,1)
-				# Compute Q-target 
-				#targets_batch = batch_rewards + discount_factor * q_values_next_target[np.arange(batch_size), best_actions]
-				#q_values_next_target[0][best_actions] = targets_batch
-
+				# Compute td-target, then action values for each experience from memory 
 				for i,state in enumerate(batch_states):
+
+					# Get action values of each next state from the batch
 					q_next = q_values_next_states[i]
+
+					# Pick the best action greedily
 					max_action = np.argmax(q_next)
+
+					# Compute td-target
 					if done:
 						target = batch_rewards[i]
 					else:
 						target = batch_rewards[i]+discount_factor * q_next[max_action]
 
+					# Update action values with td-target
 					q_values_states[i][batch_actions[i]]=target
 
+				# Compute the loss and update the approx network
 				loss = approx.update(sess, batch_states, batch_actions, q_values_states)
-				#	targets[i] = batch_rewards[i]+discount_factor*q_values_next_target[i, best_actions]
-				#	q_values_next_target[action] = target
-				# Compute the loss between Q-target and Q-network
-				#loss = approx.update(sess, batch_states, batch_actions, q_values_next_target)
 
 			else:
 			  	# Now we consider that we are in the next state, and we look further from the view of the 
 				# greedy policy pi, that is we choose the next next action from the next state
 				q_values_next = approx.predict(sess, [next_state])
-				#q_values = approx.predict(sess, [state])
+
+				# Pick the best action greedily
 				best_action = np.argmax(q_values_next[0])
 				
-				# Now we can update action value function towards the value of alternative action of 
-				# the greedy policy pi  
+				# Compute td-targets  
 				if done:
 					td_target = reward
 				else:
 					td_target = reward + discount_factor * q_values_next[0][best_action]
+
+				# Update action values with td-target
 				q_values_next[0][best_action]=td_target
-				#q_values[0][best_action]=td_target
 
 				# Compute the loss between greedy policy and epsilon greedy policy
 				loss = approx.update(sess, [state], [action], q_values_next)
-				#loss = approx.update(sess, [state], [action], q_values)
 
 			if done:
 				break

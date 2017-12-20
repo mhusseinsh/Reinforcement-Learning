@@ -210,6 +210,7 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 			stats.episode_lengths[i_episode] = t
 
 			# Stop if the max_time_per_episode is reached
+			print("episode length check",stats.episode_lengths[i_episode])
 			if stats.episode_lengths[i_episode] == max_time_per_episode:
 				break
 
@@ -222,43 +223,54 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 				# Get action values for the state that we are in
 				#q_values_next = approx.predict(sess, [next_state])
-				q_values_next = target.predict(sess, [next_state])
+				q_values_next = target.predict(sess, batch_states)
 
 				# Get the action values of the batch_states from the target network
 				q_values_next_target = target.predict(sess, batch_next_states)
 
 				# Find the best actions of each state of the batch
-				best_actions = np.argmax(q_values_next_target,1)
+				#best_actions = np.argmax(q_values_next_target,1)
 				# Compute Q-target 
-				targets_batch = batch_rewards + discount_factor * q_values_next_target[np.arange(batch_size), best_actions]
-				q_values_next_target[0][best_actions] = targets_batch
+				#targets_batch = batch_rewards + discount_factor * q_values_next_target[np.arange(batch_size), best_actions]
+				#q_values_next_target[0][best_actions] = targets_batch
 
-				#for i in batch_size:
+				for i in batch_states:
+					q_next_i = q_values_next_target[i]
+					max_action = np.argmax(q_next_i)
+					if done:
+						target = batch_rewards[i]
+					else:
+						target = batch_rewards[i]+discount_factor*q_values_next_target[max_action]
+					q_values_next[i][batch_actions[i]]=target
+				loss = approx.update(sess, batch_states, batch_actions, q_values_next)
 				#	targets[i] = batch_rewards[i]+discount_factor*q_values_next_target[i, best_actions]
-				#q_values_next_target[action][]
+				#	q_values_next_target[action] = target
 				# Compute the loss between Q-target and Q-network
-				#for i in range(batch_size):
-				#	loss = approx.update(sess, [state], [action], [q_values_next_target[i]])
-				loss = approx.update(sess, batch_states, batch_actions, q_values_next_target)
+				#loss = approx.update(sess, batch_states, batch_actions, q_values_next_target)
 
 			else:
 			  	# Now we consider that we are in the next state, and we look further from the view of the 
 				# greedy policy pi, that is we choose the next next action from the next state
 				q_values_next = approx.predict(sess, [next_state])
+				#q_values = approx.predict(sess, [state])
 				best_action = np.argmax(q_values_next[0])
 
 				
 				# Now we can update action value function towards the value of alternative action of 
 				# the greedy policy pi  
-				td_target = reward + discount_factor * q_values_next[0][best_action]
+				if done:
+					td_target = reward
+				else:
+					td_target = reward + discount_factor * q_values_next[0][best_action]
 				q_values_next[0][best_action]=td_target
+				#q_values[0][best_action]=td_target
 
 				# Compute the loss between greedy policy and epsilon greedy policy
 				loss = approx.update(sess, [state], [action], q_values_next)
+				#loss = approx.update(sess, [state], [action], q_values)
 
-
-			if done:
-				break
+			#if done:
+			#	break
 
 			state = next_state
 	
@@ -298,8 +310,8 @@ if __name__ == "__main__":
 	sess = tf.Session()
 	sess.run(tf.global_variables_initializer())
 	# Choose one.
-	#stats = q_learning(sess, env, approx, 3000, 1000)
-	stats = q_learning(sess, env, approx, 1000, 1000, use_experience_replay=True, batch_size=128, target=target)
+	stats = q_learning(sess, env, approx, 3000, 1000)
+	#stats = q_learning(sess, env, approx, 1000, 1000, use_experience_replay=True, batch_size=128, target=target)
 	plot_episode_stats(stats)
 
 	for _ in range(100):

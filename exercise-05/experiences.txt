@@ -2,28 +2,38 @@ It took quite long time to figure out how to create the estimator network with t
 
 Then we couldn’t understand how the target network was working: It would have been great to add some explanations for us in the comments.
 
-Then the major problem was the shape of data that we sent to update and predict functions. Luckily we could solve the problems (we have a very slow implementation for experience replay though).
+Then the major problem was the shape of data that we sent to update and predict functions. Luckily we could solve the problems.
 
-Experience part was difficult too due to long training time. We had to cut off the parameters num_episodes and max_time_per_episode to 300 or 100 to be able to test.
+Experience part was difficult too due to long training time. We had to run two terminals on several machines during our implementation. 
 
-We could observe changing episode lengths only with the initial settings for q-learning. We couldn’t complete a training with initial settings for experience replay.
+We spent 25 hours for this assignment… Extra time was a chance for us, but still we couldn’t get the expected convergence whatever we tried. The network and q_learning() seem okay for us, but our graphs aren’t well.
 
-We spent 15 hours for this assignment…
+We would like to have a master solution for this assignment, since it was very complicated, and we couldn’t get the correct graphs…
 
-In other experiments for two approaches, 
+For Q_learning and experiment replay, we had 4 experiments: first we used the given hyperparameters, then as keeping the other three hyperparameters, we changed the other one.
 
-for q-learning we tried:
-lr: 0.05, discount factor: 0.99, epsilon: 0.5, num_episodes: 500, max_time_per_episode:500
-lr: 0.0005, discount factor: 0.009, epsilon: 0.03, num_episodes: 300, max_time_per_episode:100
-lr: 0.0005, discount factor: 0.009, epsilon: 0.03, num_episodes: 300, max_time_per_episode:300
-lr: 0.05, discount factor: 0.09, epsilon: 0.05, num_episodes: 300, max_time_per_episode:500
+First experiment:
+learning rate: 0.005
+discount factor: 0.99
+epsilon: 0.1
 
+Second experiment:
+learning rate: 0.01
+discount factor: 0.99
+epsilon: 0.1
 
+Third experiment:
+learning rate: 0.005
+discount factor: 0.5
+epsilon: 0.1
 
-for experience replay we tried:
-lr: 0.005, discount factor: 0.9, epsilon: 0.005, num_episodes: 100, max_time_per_episode:50, batch_size: 30
-lr: 0.0005, discount factor: 0.5, epsilon: 0.001, num_episodes: 100, max_time_per_episode:50, batch_size: 30
-lr: 0.003, discount factor: 0.1, epsilon: 0.01, num_episodes: 100, max_time_per_episode:300, batch_size: 30
-lr: 0.0002, discount factor: 0.1, epsilon: 0.01, num_episodes: 300, max_time_per_episode:100, batch_size: 60
+Fourth experiment:
+learning rate: 0.005
+discount factor: 0.99
+epsilon: 0.5
 
-In terms of differences between two approaches, we couldn’t observe a healthy difference due to training time problems. But we can say that using experience replay can cause flat regions in the rewards graph, while q-learning rewards fluctuate over time constantly. For both models, the episode lengths were stable. 
+In terms of differences between two approaches:
+
+We had variable episode length only with epsilon=0.5 for both approaches, with experiment 4. For the rest of the experiments, we got pretty much the same results. 
+In experience replay, episode rewards decreased first, then increased again. In Q_learning, the rewards were fluctuating constantly. 
+

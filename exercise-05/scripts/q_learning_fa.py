@@ -200,7 +200,7 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 		# TODO: Implement this!
 		state = env.reset()
 		for t in itertools.count():
-			# Take a step
+			# Take an epsilon greedy step
 			action_probs = policy(sess, state)
 			action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 			next_state, reward, done, _ = env.step(all_actions[action])

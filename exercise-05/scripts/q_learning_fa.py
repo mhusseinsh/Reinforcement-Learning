@@ -149,7 +149,7 @@ def make_epsilon_greedy_policy(estimator, epsilon, nA):
 		return A
 	return policy_fn
 
-def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.99, epsilon=0.1, use_experience_replay=False, batch_size=128, target=None):
+def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_factor=0.5, epsilon=0.1, use_experience_replay=False, batch_size=128, target=None):
 	"""
 	Q-Learning algorithm for off-policy TD control using Function Approximation.
 	Finds the optimal greedy policy while following an epsilon-greedy policy.
@@ -189,17 +189,21 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
-
+	tn = target
+	flag = False
 	for i_episode in range(num_episodes):
-	
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
 		last_reward = stats.episode_rewards[i_episode - 1]
 		print("\rEpisode {}/{} ({})".format(i_episode + 1, num_episodes, last_reward))
 		sys.stdout.flush()
+
 		# TODO: Implement this!
 		state = env.reset()
 		for t in itertools.count():
+			if flag == True:
+				print("CHECK2")
+			flag = False
 			# Take an epsilon greedy step
 			action_probs = policy(sess, state)
 			action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
@@ -210,7 +214,9 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 			stats.episode_lengths[i_episode] = t
 
 			# Stop if the max_time_per_episode is reached
-			if stats.episode_lengths[i_episode] == max_time_per_episode:
+			if (stats.episode_lengths[i_episode] + 1) == max_time_per_episode:
+				print("CHECK1")
+				flag = True
 				break
 
 			if(use_experience_replay):
@@ -222,10 +228,10 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 				# Get action values for the state that we are in
 				#q_values_next = approx.predict(sess, [next_state])
-				q_values_states = target.predict(sess, batch_states)
+				q_values_states = tn.predict(sess, batch_states)
 
 				# Get the action values of the batch_states from the target network
-				q_values_next_states = target.predict(sess, batch_next_states)
+				q_values_next_states = tn.predict(sess, batch_next_states)
 
 				# Find the best actions of each state of the batch
 				#best_actions = np.argmax(q_values_next_target,1)
@@ -233,13 +239,13 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				#targets_batch = batch_rewards + discount_factor * q_values_next_target[np.arange(batch_size), best_actions]
 				#q_values_next_target[0][best_actions] = targets_batch
 
-				for i in batch_states:
+				for i,state in enumerate(batch_states):
 					q_next = q_values_next_states[i]
 					max_action = np.argmax(q_next)
 					if done:
 						target = batch_rewards[i]
 					else:
-						target = batch_rewards[i]+discount_factor * q_values_next_states[max_action]
+						target = batch_rewards[i]+discount_factor * q_next[max_action]
 
 					q_values_states[i][batch_actions[i]]=target
 
@@ -255,7 +261,6 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				q_values_next = approx.predict(sess, [next_state])
 				#q_values = approx.predict(sess, [state])
 				best_action = np.argmax(q_values_next[0])
-
 				
 				# Now we can update action value function towards the value of alternative action of 
 				# the greedy policy pi  
@@ -270,9 +275,8 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				loss = approx.update(sess, [state], [action], q_values_next)
 				#loss = approx.update(sess, [state], [action], q_values)
 
-			#if done:
-			#	break
-
+			if done:
+				break
 			state = next_state
 	
 	return stats
@@ -311,8 +315,8 @@ if __name__ == "__main__":
 	sess = tf.Session()
 	sess.run(tf.global_variables_initializer())
 	# Choose one.
-	stats = q_learning(sess, env, approx, 3000, 1000)
-	#stats = q_learning(sess, env, approx, 1000, 1000, use_experience_replay=True, batch_size=128, target=target)
+	#stats = q_learning(sess, env, approx, 3000, 1000)
+	stats = q_learning(sess, env, approx, 1000, 1000, use_experience_replay=True, batch_size=128, target=target)
 	plot_episode_stats(stats)
 
 	for _ in range(100):

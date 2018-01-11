@@ -1,0 +1,47 @@
+-------
+Exercise 05
+-------
+
+1: (-2 pts)
+
+Line 46:
+  self.y = tf.contrib.layers.fully_connected(self.fc2, env.action_space.n, activation_fn=None)
+Why did you use self.y again? You used it already in line 38. And in line 85, you did:
+  feed_dict = { self.x: states, self.actions: actions, self.y: targets }
+You have mixed up what are the targets and what are the predictions. The targets are the true values/labels. The predictions are the output of the network.
+
+Line 49:
+  self.losses = tf.losses.mean_squared_error([all_actions], self.y, reduction =tf.losses.Reduction.NONE)
+Why did you use all_actions? If self.y are your network's predictions, instead of all_actions you have to use the targets here (for which you should have declared self.targets in line 38 instead of self.y).
+
+Line 50:
+  self.loss = tf.reduce_mean(self.losses)
+You don't have to do reduce_mean. You already took mean_squared_error in the previous step.
+
+-------
+Overall for task 1: 4 pts
+-------
+
+2 (a):
+Correct!
+
+2 (b):
+For the use_experience_replay part, similar to approx.update(), you have to do target.update(), but you haven't done that. (-1 pt)
+
+
+-------
+Overall for task 2: 13 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 05: 18/20 pts
+--------------
+
+Well done!
+
+In case of any questions, feel free to contact me at rajanr@cs.uni-freiburg.de,
+Raghu.

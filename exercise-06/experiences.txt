@@ -1,0 +1,9 @@
+Experiences:
+
+We spent some time to understand what to do since we had not understood the policy gradient very well during the lecture. 
+
+It was a mess for us what was the score function, where to use it and with what… After a while we figured these out and implemented the policy network. It wasn’t perfectly converging, so we considered having a action-value approximation.
+
+We used our modified and working network from the previous assignment, but it was worse. Briefly, we couldn’t find the right target for updating the policy estimator. We tried many options, but each of them was worse than our first plain policy gradient method, so we cancelled out that.
+
+We spent 10 hours for this assignment. 

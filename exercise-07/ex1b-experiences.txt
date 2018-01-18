@@ -1,0 +1,29 @@
+Ex7.1:
+a) Random strategy is bad, as we expected. Epsilon greedy and decaying epsilon greedy choose the best action 0 mostly, and their regret curves are as expected. 
+
+Our schedule is a simple exponential decay - so as . We have tried so long for the schedule given in the video lecture, but failed.
+
+Our ucb1 implementation is working, but it is not optimal (we don’t know why - we would love to learn). On each run, it chooses an action (almost randomly), and it takes that one the most(99%). This action may be any action really.
+
+Luckily, during our last run, it chose the action 0, and it had the lowest regret :) In other cases, it is linear.
+
+
+b) We assume breaking the robot is really bad, and there is no go back after that point. So we must not break the robot. We also assume that the reward function is continuous, such that if we are close to a state/in a state where a destructive action exists, then the reward is very low.
+
+Greedy algorithm: If we can complete the first episode without breaking the robot, this might be the safest way since the robot will take the actions it knows the best, but it won’t explore enough.
+
+Epsilon greedy algorithm: It won’t be great for exploration again, but the robot may survive.
+
+Optimistic initialisation: This may be bad for the robot, it may take a destructive action very early because of the optimisation.
+
+UCB1: This strategy doesn’t protect the robot from taking a destructive action as well. In early time steps when the U is large, the robot can be destroyed. But also, in time, this strategy may help us to find the best actions.
+
+Bayesian approach: Again, if the robot can survive long enough to collect some prior (history), it can help. By gaining experience, the robot will be able to see the reward distribution more clearly, hence it can choose the best actions.
+
+Thompson Sampling (Probability matching): This is a good approach too if the robot can survive long enough. Because after it has enough history to compute posterior, it will compute the action-values and choose the best actions without being destroyed.
+
+Bayes adaptive information state space: Since the state space is continuous, this will be huge. But still, given the history, the robot will predict the transition and the reward - this may protect it from being destroyed.
+
+Experiences:
+
+This assignement progressed really fast at the beginning, but then we struggled with the schedule (with the given settings it was impossible to apply the schedule from the lecture) and the untrustworthy ucb1 of ours. It was a fun and informative one. We spent 15 hours :( It would be so much less if there would be more explanations about the problem setting like the best action, why the schedule can’t be implemented with the given settings etc. Because one expects the given code stub is optimal…

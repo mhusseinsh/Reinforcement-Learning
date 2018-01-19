@@ -1,0 +1,31 @@
+-------
+Exercise 06
+-------
+1:
+Correct!
+
+Lines 53-54:
+  self.predictions = tf.squeeze(tf.nn.softmax(self.fc3))
+  self.action_predictions = tf.gather(self.predictions, self.actions_pl)
+You didn't need to squeeze it or touch the original code here. But in this case, your code will also work because it's only a single training point at a time, so no points deducted.
+
+You had the wrong setting for the learning rate for AdamOptimizer, that's why you didn't get graphs like Gabriel. (-1 pt)
+
+You didn't provide a comparison of Q-learning and Monte Carlo Policy Gradient. (-2 pts) (You couldn't do it because of the problems you faced, of course.)
+
+-------
+Overall for task 1: 17 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 06: 18/20 pts
+--------------
+
+Well done!
+
+In case of any questions, feel free to contact me at rajanr@cs.uni-freiburg.de,
+Raghu.

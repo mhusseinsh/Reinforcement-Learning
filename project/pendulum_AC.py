@@ -7,6 +7,7 @@ import itertools
 import pandas as pd
 from PIL import Image
 import time
+import datetime
 
 if "../lib/envs" not in sys.path:
 	sys.path.append("../lib/envs")
@@ -15,11 +16,13 @@ from pendulum import PendulumEnv
 EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
 
 # An array to use for action indexes
-#all_actions = [-2., -1., 0., 1., 2.]
-action_indices = [0, 1, 2, 3, 4]
 state_space_size = 3
-action_space_size = len(all_actions)
-action_index = {0: -2, 1: -1.75, 2: -1.5}
+
+intervals = np.linspace(-2.0, 2.0, num=41)
+action_indices = np.arange(0,41)
+action_index = {key: value for key, value in zip(range(41),intervals)}
+inv_action_index = {value: key for key, value in action_index.items()}
+action_space_size = len(action_indices)
 
 class CriticNetwork():
 	"""
@@ -120,22 +123,24 @@ class ActorNetwork():
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
 		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-		self.fc3 = tf.contrib.layers.fully_connected(self.fc2, action_indices, activation_fn=None,
+		self.fc3 = tf.contrib.layers.fully_connected(self.fc2, action_space_size, activation_fn=None,
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
 
 		self.predictions = tf.contrib.layers.softmax(self.fc3)
 		#self.predictions = tf.nn.softmax(self.fc3)
-		print("self.predictions: ",self.predictions[1])
-		print("self.actions: ", self.actions_pl)
-		print("batch size: ",batch_size)
+		#print("self.predictions: ",self.predictions.shape)
+		#print("self.actions: ", self.actions_pl)
+		#print("batch size: ",batch_size)
 		
 		#self.action_predictions = tf.gather(self.predictions, self.actions_pl)
+		#self.action_predictions = tf.gather(self.predictions, self.actions_pl)
+
 		# Get the predictions for the chosen actions only
 		gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
 
 		#print("indices: ",gather_indices)
 
-		self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), gather_indices)
+		self.action_predictions = tf.gather(tf.reshape(self.predictions,[-1]), gather_indices)
 
 		# -----------------------------------------------------------------------
 		# TODO: Implement the policy gradient objective. Do not forget to negate
@@ -164,8 +169,8 @@ class ActorNetwork():
 		"""
 		#exit()
 		p = sess.run(self.predictions, { self.states_pl: s })
-		p = p.reshape(5,)
-		return np.random.choice(all_actions, p=p), p
+		p = p.reshape(action_space_size,)
+		return np.random.choice(action_indices, p=p), p
 
 	def update(self, sess, s, a, y):
 		"""
@@ -189,15 +194,15 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 	for i_episode in range(num_episodes):
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
-		"""last_reward = stats.episode_rewards[i_episode - 1]
-								print("\rEpisode {}/{} ({})".format(i_episode + 1, num_episodes, last_reward))
-								sys.stdout.flush()"""
+		print("\r Episode {}/{} ({})".format(
+             i_episode + 1, num_episodes, stats.episode_rewards[i_episode - 1]))
+
 		state = env.reset()
 		for t in itertools.count():
 
 			# get an action from policy : actor gives the action
 			action_predicted, action_probs = actor.predict(sess, [state])
-			print("action: ",action_predicted)
+			#print("action: ",action_predicted)
 			action = action_index[action_predicted]
 			# take the action given by the actor
 			next_state, reward, done, _ = env.step([action])
@@ -223,7 +228,8 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 				break
 
 			# update actor: policy improvement
-			actor.update(sess, [state], [action], td_error)
+			action_ind = inv_action_index[action]
+			actor.update(sess, [state], [action_ind], td_error)
 
 			state = next_state
 
@@ -265,16 +271,21 @@ if __name__ == "__main__":
 
 	sess = tf.Session()
 	start_time = time.time()
+	print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 	sess.run(tf.global_variables_initializer())
 
 	stats = pendulum(sess, env, actor, critic, 200, 1000)
 	print("--- %s seconds ---" % (time.time() - start_time))
+	print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 	plot_episode_stats(stats)
 
-	for _ in range(100):
+	for _ in range(200):
 		state = env.reset()
 		for _ in range(1000):
 			env.render()
-			state,_,done,_ = env.step(np.argmax(approx.predict(sess, [state])))
+			action_predicted, action_probs = actor.predict(sess, [state])
+			action = action_index[action_predicted]
+			state, _, done, _ = env.step([action])
+
 			if done:
 				break

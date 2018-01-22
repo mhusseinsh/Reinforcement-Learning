@@ -57,11 +57,11 @@ class Policy():
 
    # self.predictions = tf.contrib.layers.softmax(self.fc3)
     self.predictions = tf.squeeze(tf.nn.softmax(self.fc3))
-    self.action_predictions = tf.gather(self.predictions, self.actions_pl)
+    #self.action_predictions = tf.gather(self.predictions, self.actions_pl)
 
     # Get the predictions for the chosen actions only
-    #gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
-    #self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), gather_indices)
+    gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
+    self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), gather_indices)
 
     # -----------------------------------------------------------------------
     # TODO: Implement the policy gradient objective. Do not forget to negate
@@ -131,10 +131,6 @@ def reinforce(sess, env, policy, best_policy, num_episodes, discount_factor=1.0)
     # An episode is an array of (state, action, reward) tuples
     episode = []
     state = env.reset()
-    #state = state.reshape(-1, 3)
-    print(state)
-    print('state shape', state.shape)
-    print('state shape 2', np.asarray(state).reshape(1,3).shape)
     # To log the best_policy 
     best_policy_reward = 0
 
@@ -147,8 +143,7 @@ def reinforce(sess, env, policy, best_policy, num_episodes, discount_factor=1.0)
       #raise NotImplementedError("REINFORCE not implemented.")
 
       # Get the action from the policy
-      st = np.asarray([state])[0]
-      action_predicted, action_probs = policy.predict(sess,st)
+      action_predicted, action_probs = policy.predict(sess,np.asarray(state).reshape(-1,3))
       action = action_predicted.reshape((1, env.action_space.shape[0]))
       selected_action_prob = action_probs[action_predicted]
       next_state, reward, done, _ = env.step(action)
@@ -182,7 +177,9 @@ def reinforce(sess, env, policy, best_policy, num_episodes, discount_factor=1.0)
       st = np.asarray([e[0]])
       # e[0]: state, e[1]: predicted_action
       # Update the policy 
-      policy.update(sess,st[0],[e[1]],[G])
+      state = np.asarray(e[0]).reshape(-1,3)
+      action = np.asarray(e[1]).reshape(-1,1)
+      policy.update(sess,state,action,[G])
 
   #mean_G = np.mean(stats.episode_rewards, axis = 1)
   #print("Mean return:", mean_G)

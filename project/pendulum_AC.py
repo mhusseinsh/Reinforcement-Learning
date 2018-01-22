@@ -186,7 +186,7 @@ class ActorNetwork():
 		feed_dict = { self.states_pl: s, self.targets_pl: y, self.actions_pl: a }
 		sess.run(self.train_op, feed_dict)
 
-def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, discount_factor=0.99, epsilon=0.1):
+def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, discount_factor):
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
@@ -195,7 +195,7 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
 		print("\r Episode {}/{} ({})".format(
-             i_episode + 1, num_episodes, stats.episode_rewards[i_episode - 1]))
+             i_episode + 1, num_episodes, stats.episode_rewards[i_episode - 1])"\r")
 
 		state = env.reset()
 		for t in itertools.count():
@@ -265,27 +265,30 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 		plt.show(fig2)
 
 if __name__ == "__main__":
-	env = PendulumEnv()
-	actor = ActorNetwork()
-	critic = CriticNetwork()
+	discount_factor = [i for i in range(np.random.uniform(0.00000001,1,100))]
+	for gamma in discount_factor:
+		env = PendulumEnv()
+		actor = ActorNetwork()
+		critic = CriticNetwork()
 
-	sess = tf.Session()
-	start_time = time.time()
-	print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
-	sess.run(tf.global_variables_initializer())
+		sess = tf.Session()
+		start_time = time.time()
+		print("Discount factor: ", gamma)
+		print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
+		sess.run(tf.global_variables_initializer())
+	
+		stats = pendulum(sess, env, actor, critic, 200, 1000, gamma)
+		print("--- %s seconds ---" % (time.time() - start_time))
+		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
+		plot_episode_stats(stats)
 
-	stats = pendulum(sess, env, actor, critic, 200, 1000)
-	print("--- %s seconds ---" % (time.time() - start_time))
-	print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
-	plot_episode_stats(stats)
-
-	for _ in range(200):
-		state = env.reset()
-		for _ in range(1000):
-			env.render()
-			action_predicted, action_probs = actor.predict(sess, [state])
-			action = action_index[action_predicted]
-			state, _, done, _ = env.step([action])
-
-			if done:
-				break
+	"""for _ in range(200):
+					state = env.reset()
+					for _ in range(1000):
+						env.render()
+						action_predicted, action_probs = actor.predict(sess, [state])
+						action = action_index[action_predicted]
+						state, _, done, _ = env.step([action])
+			
+						if done:
+							break"""

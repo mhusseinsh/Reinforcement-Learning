@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import sys
 import tensorflow as tf
@@ -8,6 +9,7 @@ import pandas as pd
 from PIL import Image
 import time
 import datetime
+
 
 if "../lib/envs" not in sys.path:
 	sys.path.append("../lib/envs")
@@ -194,8 +196,9 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 	for i_episode in range(num_episodes):
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
-		print("\r Episode {}/{} ({})".format(
-             i_episode + 1, num_episodes, stats.episode_rewards[i_episode - 1])"\r")
+		print("Episode {}/{} ({})".format(i_episode + 1, 
+			num_episodes, stats.episode_rewards[i_episode - 1]),end='\r')
+		sys.stdout.flush()
 
 		state = env.reset()
 		for t in itertools.count():
@@ -265,7 +268,8 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 		plt.show(fig2)
 
 if __name__ == "__main__":
-	discount_factor = [i for i in range(np.random.uniform(0.00000001,1,100))]
+	discount_factor = np.random.uniform(0.00000001,1,100)
+	stats = []
 	for gamma in discount_factor:
 		env = PendulumEnv()
 		actor = ActorNetwork()
@@ -277,10 +281,10 @@ if __name__ == "__main__":
 		print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 		sess.run(tf.global_variables_initializer())
 	
-		stats = pendulum(sess, env, actor, critic, 200, 1000, gamma)
+		stats.append(pendulum(sess, env, actor, critic, 200, 1000, gamma))
 		print("--- %s seconds ---" % (time.time() - start_time))
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
-		plot_episode_stats(stats)
+	plot_episode_stats(stats)
 
 	"""for _ in range(200):
 					state = env.reset()

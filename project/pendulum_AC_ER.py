@@ -166,17 +166,8 @@ class ActorNetwork():
 
 		self.action_predictions = tf.gather(tf.reshape(self.predictions,[-1]), gather_indices)
 
-		# -----------------------------------------------------------------------
-		# TODO: Implement the policy gradient objective. Do not forget to negate
-		# -----------------------------------------------------------------------
-		# the objective, since the predefined optimizers only minimize in
-		# tensorflow.
-
-		#-tf.reducemean(tf.log...)
-		#self.objective = -tf.log(self.action_predictions) * self.targets_pl
-		#self.objective = -tf.reduce_mean(tf.log(self.action_predictions) * (self.targets_pl - baseline))
 		self.objective = -tf.reduce_mean(tf.log(self.action_predictions) * (self.targets_pl))
-		#raise NotImplementedError("Softmax output not implemented.")
+
 
 		self.optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
 		self.train_op = self.optimizer.minimize(self.objective)
@@ -210,11 +201,36 @@ class ActorNetwork():
 		feed_dict = { self.states_pl: s, self.targets_pl: y, self.actions_pl: a }
 		sess.run(self.train_op, feed_dict)
 
-def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, discount_factor):
+class ReplayBuffer:
+	#Replay buffer for experience replay. Stores transitions.
+	def __init__(self):
+		self._data = namedtuple("ReplayBuffer", ["states", "actions", "next_states", "rewards", "dones"])
+		self._data = self._data(states=[], actions=[], next_states=[], rewards=[], dones=[])
+
+	def add_transition(self, state, action, next_state, reward, done):
+		self._data.states.append(state)
+		self._data.actions.append(action)
+		self._data.next_states.append(next_state)
+		self._data.rewards.append(reward)
+		self._data.dones.append(done)
+
+	def next_batch(self, batch_size):
+		batch_indices = np.random.choice(len(self._data.states), batch_size)
+		batch_states = np.array([self._data.states[i] for i in batch_indices])
+		batch_actions = np.array([self._data.actions[i] for i in batch_indices])
+		batch_next_states = np.array([self._data.next_states[i] for i in batch_indices])
+		batch_rewards = np.array([self._data.rewards[i] for i in batch_indices])
+		batch_dones = np.array([self._data.dones[i] for i in batch_indices])
+		return batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones
+
+def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, discount_factor, batch_size):
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
-	print("here")
+
+	# Create the experiences memory
+	replay_memory = ReplayBuffer()
+	
 	for i_episode in range(num_episodes):
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
@@ -223,6 +239,7 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 		sys.stdout.flush()
 
 		state = env.reset()
+
 		for t in itertools.count():
 
 			# Stop if the max_time_per_episode is reached
@@ -235,30 +252,32 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 			action = action_index[action_predicted]
 			# take the action given by the actor
 			next_state, reward, done, _ = env.step([action])
-			#print("reward: ",reward)
 
-			# predict value of next state
-			v_next = critic.predict(sess, [next_state])
-			# predict value of this state
-			v_current = critic.predict(sess, [state])
 
-			td_target = reward + discount_factor * v_next[0] 
-			
-			td_error = td_target - v_current[0]
+			replay_memory.add_transition(state, action, next_state, reward, done)
 
-			# update critic : policy evaluation 
-			critic.update(sess, [state], td_target)
+			# Sample a minibatch from the replay memory
+			batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.next_batch(batch_size)
+
+			batch_v_next = critic.predict(sess, batch_next_states)
+			batch_td_targets = batch_rewards + np.invert(batch_dones).astype(np.float32) * discount_factor * batch_v_next[0]
+
+			batch_states = np.array(batch_states)
+			critic.update(sess, batch_states, batch_td_targets)
+
+			batch_v_current = critic.predict(sess, [state])
+			batch_td_errors = batch_td_targets - batch_v_current[0]
+
+			# update actor: policy improvement
+			action_ind = inv_action_index[action]
+			actor.update(sess, [state], [action_ind], batch_td_errors)
 
 			# Update statistics
 			stats.episode_rewards[i_episode] += reward
 			stats.episode_lengths[i_episode] = t
 
-			# update actor: policy improvement
-			action_ind = inv_action_index[action]
-			actor.update(sess, [state], [action_ind], td_error)
-
 			state = next_state
-			#print("end of episode")
+
 			if done:
 				break
 
@@ -305,14 +324,13 @@ if __name__ == "__main__":
 
 		print("Model ",i)
 		print("Configuration used: ", config_dict.get("config_dict{0}".format(i)))
-
+		
 		# An array to use for action indexes
 		action_indices = config_dict.get("config_dict{0}".format(i)).get('action_indices')
 		intervals = np.linspace(-2.0, 2.0, num=action_indices)
 		action_index = {key: value for key, value in zip(range(action_indices),intervals)}
 		inv_action_index = {value: key for key, value in action_index.items()}
 		action_space_size = action_indices
-		
 
 		actor = ActorNetwork(config_dict.get("config_dict{0}".format(i)).get('learning_rate'),
 							action_space_size,
@@ -335,15 +353,15 @@ if __name__ == "__main__":
 		stats.append(pendulum(sess, env, actor, critic, 
 			config_dict.get("config_dict{0}".format(i)).get('num_episodes'), 
 			200,
-			config_dict.get("config_dict{0}".format(i)).get('discount_factor')))
-
+			config_dict.get("config_dict{0}".format(i)).get('discount_factor'),
+			config_dict.get("config_dict{0}".format(i)).get('batch_size')))
 
 		print("--- %s seconds ---" % (time.time() - start_time))
 
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 		plot_episode_stats(stats[i])
 
-	plot_episode_stats(stats)
+	#plot_episode_stats(stats)
 
 	"""for _ in range(200):
 					state = env.reset()

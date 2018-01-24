@@ -10,28 +10,33 @@ from PIL import Image
 import time
 import datetime
 
+from config_space import get_config_space
 
 if "../lib/envs" not in sys.path:
 	sys.path.append("../lib/envs")
 from pendulum import PendulumEnv
 
 EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
-
-# An array to use for action indexes
 state_space_size = 3
-
-intervals = np.linspace(-2.0, 2.0, num=41)
-action_indices = np.arange(0,41)
-action_index = {key: value for key, value in zip(range(41),intervals)}
-inv_action_index = {value: key for key, value in action_index.items()}
-action_space_size = len(action_indices)
 
 class CriticNetwork():
 	"""
 	Neural Network class based on TensorFlow.
 	"""
-	def __init__(self):
+	def __init__(self, learning_rate,
+					   num_fc_units_1, 
+					   num_fc_units_2, 
+					   num_fc_units_3, 
+					   num_fc_units_4):
+
+		self.learning_rate = learning_rate
+		self.num_fc_units_1 = num_fc_units_1
+		self.num_fc_units_2 = num_fc_units_2
+		self.num_fc_units_3 = num_fc_units_3
+		self.num_fc_units_4 = num_fc_units_4
+
 		self._build_model()
+
 
 	def _build_model(self):
 
@@ -44,12 +49,14 @@ class CriticNetwork():
 		#self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
 
 		# Create fully connected layers such that one is the others's input
-		self.fc1 = tf.contrib.layers.fully_connected(self.state, 20, activation_fn=tf.nn.relu)
-		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu)
+		self.fc1 = tf.contrib.layers.fully_connected(self.state, self.num_fc_units_1, activation_fn=tf.nn.relu)
+		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, self.num_fc_units_2, activation_fn=tf.nn.relu)
+		self.fc3 = tf.contrib.layers.fully_connected(self.fc2, self.num_fc_units_3, activation_fn=tf.nn.relu)
+		self.fc4 = tf.contrib.layers.fully_connected(self.fc3, self.num_fc_units_4, activation_fn=tf.nn.relu)
 
 		# Output layer will have linear activation with "activation_fn=None"
 		# Name changed to predictions
-		self.state_value = tf.contrib.layers.fully_connected(self.fc2, 1, activation_fn=None)
+		self.state_value = tf.contrib.layers.fully_connected(self.fc4, 1, activation_fn=None)
 
 		# Prepare loss by using mean squared error
 		# [all_actions] wrong: this should be the target(s)
@@ -70,7 +77,7 @@ class CriticNetwork():
 
 		# Use Adam as optimizer 
 		# use a small lr
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.000005)
+		self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 		self.train_op = self.optimizer.minimize(self.loss)
 
 		# Initiate global variables
@@ -106,7 +113,20 @@ class CriticNetwork():
 		sess.run([self.train_op, self.loss],feed_dict)
 
 class ActorNetwork():
- 	def __init__(self):
+	def __init__(self, learning_rate, 
+					   action_space_size, 
+					   num_fc_units_1, 
+					   num_fc_units_2, 
+					   num_fc_units_3, 
+					   num_fc_units_4):
+
+		self.learning_rate = learning_rate
+		self.action_space_size = action_space_size
+		self.num_fc_units_1 = num_fc_units_1
+		self.num_fc_units_2 = num_fc_units_2
+		self.num_fc_units_3 = num_fc_units_3
+		self.num_fc_units_4 = num_fc_units_4
+
 		self._build_model()
 
 	def _build_model(self):
@@ -121,14 +141,18 @@ class ActorNetwork():
 
 		batch_size = tf.shape(self.states_pl)[0]
 
-		self.fc1 = tf.contrib.layers.fully_connected(self.states_pl, 20, activation_fn=tf.nn.relu,
+		self.fc1 = tf.contrib.layers.fully_connected(self.states_pl, self.num_fc_units_1, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu,
+		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, self.num_fc_units_2, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-		self.fc3 = tf.contrib.layers.fully_connected(self.fc2, action_space_size, activation_fn=None,
+		self.fc3 = tf.contrib.layers.fully_connected(self.fc2, self.num_fc_units_3, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		self.fc4 = tf.contrib.layers.fully_connected(self.fc3, self.num_fc_units_4, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		self.fc5 = tf.contrib.layers.fully_connected(self.fc4, self.action_space_size, activation_fn=None,
 		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
 
-		self.predictions = tf.contrib.layers.softmax(self.fc3)
+		self.predictions = tf.contrib.layers.softmax(self.fc5)
 		#self.predictions = tf.nn.softmax(self.fc3)
 		#print("self.predictions: ",self.predictions.shape)
 		#print("self.actions: ", self.actions_pl)
@@ -156,12 +180,12 @@ class ActorNetwork():
 		self.objective = -tf.reduce_mean(tf.log(self.action_predictions) * (self.targets_pl))
 		#raise NotImplementedError("Softmax output not implemented.")
 
-		self.optimizer = tf.train.AdamOptimizer(0.00001)
+		self.optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
 		self.train_op = self.optimizer.minimize(self.objective)
 
 		init = tf.global_variables_initializer()
 
- 	def predict(self, sess, s):
+	def predict(self, sess, s):
 		"""
 		Args:
 		  sess: TensorFlow session
@@ -270,20 +294,53 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 if __name__ == "__main__":
 	discount_factor = np.random.uniform(0.00000001,1,100)
 	stats = []
-	for gamma in discount_factor:
+
+	config_dict = {}
+	budget = 20
+	for i in range(budget):
+		config_space_dist = get_config_space().sample_configuration()
+		config_dict["config_dict{0}".format(i)] = config_space_dist.get_dictionary()
+
+	# An array to use for action indexes
+	action_indices = config_dict.get("config_dict{0}".format(i)).get('action_indices')
+	intervals = np.linspace(-2.0, 2.0, num=action_indices)
+	action_index = {key: value for key, value in zip(range(action_indices),intervals)}
+	inv_action_index = {value: key for key, value in action_index.items()}
+	action_space_size = action_indices
+
+	for i in range(budget):
+
+		print("Model ",i)
+		print("Configuration used: ", config_dict.get("config_dict{0}".format(i)))
 		env = PendulumEnv()
-		actor = ActorNetwork()
-		critic = CriticNetwork()
+
+		actor = ActorNetwork(config_dict.get("config_dict{0}".format(i)).get('learning_rate'),
+			action_space_size,
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_1'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_2'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_3'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_4'))
+
+		critic = CriticNetwork(config_dict.get("config_dict{0}".format(i)).get('learning_rate'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_1'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_2'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_3'),
+			config_dict.get("config_dict{0}".format(i)).get('num_fc_units_4'))
 
 		sess = tf.Session()
 		start_time = time.time()
-		print("Discount factor: ", gamma)
 		print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 		sess.run(tf.global_variables_initializer())
-	
-		stats.append(pendulum(sess, env, actor, critic, 200, 1000, gamma))
+
+		stats.append(pendulum(sess, env, actor, critic, 200, 
+			config_dict.get("config_dict{0}".format(i)).get('max_time_per_episode'), 
+			config_dict.get("config_dict{0}".format(i)).get('discount_factor'),))
+
 		print("--- %s seconds ---" % (time.time() - start_time))
+
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
+		plot_episode_stats(stats[i])
+
 	plot_episode_stats(stats)
 
 	"""for _ in range(200):

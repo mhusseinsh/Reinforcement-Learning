@@ -1,0 +1,44 @@
+-------
+Exercise 07
+-------
+1 (a):
+Line 24:
+  best_action = 0
+You should take the argmax over the bandit_q_values and not hardcode the best action. (-1 pt)
+
+For UCB1, replace:
+  actions.append(mab.bandit_q_values[i] + np.sqrt(2 * np.log(mab.step_counter) * np.reciprocal(mab.bandit_counters[i])))
+with:
+  actions.append(mab.bandit_q_values[i] + np.sqrt(2 * np.log(mab.step_counter) * np.reciprocal(np.float(mab.bandit_counters[i]))))
+The it works. Always be careful with floating point values in Python. (-2 pts)
+
+1 (b):
+Correct!
+You said:
+"Optimistic initialisation: This may be bad for the robot, it may take a destructive action very early because of the optimisation."
+Should be "optimism" not "optimisation".
+
+You said:
+"Bayesian approach: Again, if the robot can survive long enough to collect some prior (history), it can help."
+Prior is not collected. It's provided beforehand. Once you collect information, you get the posterior distribution.
+
+You explained "What problems occur with some of the presented exploration strategies" but didn't really explain "how would you approach
+the exploration?" (-2 pts)
+
+-------
+Overall for task 1: 15 pts
+-------
+
+-------
+Bonus: 1pt
+-------
+
+--------------
+Overall for exercise 07: 16/20 pts
+--------------
+
+Well done!
+
+Good luck with the project and exam!
+In case of any questions, feel free to contact me at rajanr@cs.uni-freiburg.de,
+Raghu.

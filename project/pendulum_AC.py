@@ -264,14 +264,14 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 
 	return stats
 
-def plot_episode_stats(stats, smoothing_window=10, noshow=False):
+def plot_episode_stats(stats, i ,smoothing_window=10, noshow=True):
 	# Plot the episode length over time
 	fig1 = plt.figure(figsize=(10,5))
 	plt.plot(stats.episode_lengths)
 	plt.xlabel("Episode")
 	plt.ylabel("Episode Length")
 	plt.title("Episode Length over Time")
-	fig1.savefig('episode_lengths.png')
+	fig1.savefig('Model_'+ str(i) + '_episode_lengths.png')
 	if noshow:
 		plt.close(fig1)
 	else:
@@ -284,7 +284,7 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 	plt.xlabel("Episode")
 	plt.ylabel("Episode Reward (Smoothed)")
 	plt.title("Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
-	fig2.savefig('reward.png')
+	fig2.savefig('Model_'+ str(i) + '_reward.png')
 	if noshow:
 		plt.close(fig2)
 	else:
@@ -341,9 +341,12 @@ if __name__ == "__main__":
 		print("--- %s seconds ---" % (time.time() - start_time))
 
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
-		plot_episode_stats(stats[i])
-
-	plot_episode_stats(stats)
+		plot_episode_stats(stats[i], i)
+		name = 'Model_' + str(i) + '_configs.txt'
+		configs = ("Configuration used: ", config_dict.get("config_dict{0}".format(i)))
+		np.savetxt(name, configs, fmt='%5s', delimiter=',')
+		
+	plot_episode_stats(stats, i)
 
 	"""for _ in range(200):
 					state = env.reset()

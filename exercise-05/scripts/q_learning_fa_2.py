@@ -6,9 +6,9 @@ import pandas as pd
 from collections import namedtuple
 import itertools
 
-if "../lib/envs" not in sys.path:
-  sys.path.append("../lib/envs")
-from pendulum import PendulumEnv
+if "../../lib/envs" not in sys.path:
+  sys.path.append("../../lib/envs")
+from mountain_car import MountainCarEnv
 
 EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
 
@@ -19,75 +19,34 @@ class NeuralNetwork():
 	"""
 	Neural Network class based on TensorFlow.
 	"""
-	def __init__(self):
-		self._build_model()
+	def __init__(self, learning_rate=0.00001, scope="value_estimator"):
+		with tf.variable_scope(scope):
+			self.state = tf.placeholder(shape = [None, 2], dtype=tf.float32 , name="state")
+			self.target = tf.placeholder(shape = [None], dtype=tf.float32, name="target")
+			self.action = tf.placeholder(shape=[None], dtype=tf.int32)
 
-	def _build_model(self):
-		"""
-		Creates a neural network, e.g. with two
-		hidden fully connected layers and 20 neurons each). The output layer
-		has #A neurons, where #A is the number of actions and has linear activation.
-		Also creates its loss (mean squared loss) and its optimizer (e.g. Adam with
-		a learning rate of 0.0005). For initialization, you can simply use a uniform
-		distribution (-0.5, 0.5), or something different.
-		"""
-		# TODO: Implement this!
+			self.fc1 = tf.contrib.layers.fully_connected(self.state, 20, activation_fn=tf.nn.relu,
+			weights_initializer=tf.random_uniform_initializer(0, 0.5))
+			self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu,
+			weights_initializer=tf.random_uniform_initializer(0, 0.5))
+			self.fc3 = tf.contrib.layers.fully_connected(self.fc2, 3, activation_fn=None,
+			weights_initializer=tf.random_uniform_initializer(0, 0.5))
 
-		# Create placeholders for input, output and actions of the network 
-		self.x = tf.placeholder(shape=[None, 2], dtype=tf.float32)
-		# Added later
-		batch_size = tf.shape(self.x)[0]
+			# Output layer will have linear activation with "activation_fn=None"
+			# Name changed to predictions
+			self.predictions = tf.squeeze(self.fc3)
 
-		self.y = tf.placeholder(shape=[None], dtype=tf.float32)
-		self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
+			self.action_predictions = tf.gather(self.predictions, self.action)
 
-		# Create fully connected layers such that one is the others's input
-		self.fc1 = tf.contrib.layers.fully_connected(self.x, 20, activation_fn=tf.nn.relu)
-		self.fc2 = tf.contrib.layers.fully_connected(self.fc1, 20, activation_fn=tf.nn.relu)
+			self.loss = tf.squared_difference(self.action_predictions, self.target)
 
-		# Output layer will have linear activation with "activation_fn=None"
-		# Name changed to predictions
-		self.predictions = tf.contrib.layers.fully_connected(self.fc2, env.action_space.n, activation_fn=None)
+			self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+			self.train_op = self.optimizer.minimize(
+			self.loss, global_step=tf.contrib.framework.get_global_step())        
 
-		# Prepare loss by using mean squared error
-		# [all_actions] wrong: this should be the target(s)
-		# clarify what is y: target or prediction
-		# when predicting check which action was taken, then choose the index of the action for the prediction
-
-		# Bleow part added later
-
-		# Get the predictions for the chosen actions only
-		gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions
-		self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), gather_indices)
-
-		# Calcualte the loss
-		# self.losses = tf.losses.mean_squared_error([all_actions], self.y, reduction =tf.losses.Reduction.NONE)
-		self.losses = tf.squared_difference(self.y, self.action_predictions)
-		self.loss = tf.reduce_mean(self.losses)
-
-		# not needed
-		# self.loss = tf.reduce_mean(self.losses)
-
-		# Use Adam as optimizer 
-		# use a small lr
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.000005)
-		self.train_op = self.optimizer.minimize(self.loss)
-
-		# Initiate global variables
-		init = tf.global_variables_initializer()
-
-	def predict(self, sess, states):
-		"""
-		Args:
-			sess: TensorFlow session
-			states: array of states for which we want to predict the actions.
-		Returns:
-			The prediction of the output tensor.
-		"""
-		# TODO: Implement this!
-		# prediction = sess.run(self.y, { self.x: states})
-		prediction = sess.run(self.predictions, { self.x: states})
-		return prediction
+	def predict(self,sess, state):
+		#sess = sess or tf.get_default_session()
+		return sess.run(self.predictions, { self.state: state })
 
 	def update(self, sess, states, actions, targets):
 		"""
@@ -95,20 +54,18 @@ class NeuralNetwork():
 		predictions, its loss and its optimizer.
 
 		Args:
-			sess: TensorFlow session.
-			states: [current_state] or states of batch
-			actions: [current_action] or actions of batch
-			targets: [current_target] or targets of batch
+		  sess: TensorFlow session.
+		  states: [current_state] or states of batch
+		  actions: [current_action] or actions of batch
+		  targets: [current_target] or targets of batch
 		"""
-			# TODO: Implement this!
+		  # TODO: Implement this!
 
 		# Get input (states), labels (actions), and predictions (targets) 
-		feed_dict = { self.x: states, self.actions: actions, self.y: targets }
+		feed_dict = { self.state: states, self.action: actions, self.target: targets }
 
 		# Compute loss and update
 		_, loss = sess.run([self.train_op, self.loss],feed_dict)
-
-		return loss
 
 class TargetNetwork(NeuralNetwork):
 	"""
@@ -133,6 +90,7 @@ class TargetNetwork(NeuralNetwork):
 	def update(self, sess):
 		for op in self._associate:
 			sess.run(op)
+
 
 class ReplayBuffer:
 	#Replay buffer for experience replay. Stores transitions.
@@ -239,12 +197,17 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 
 				# Sample a minibatch from the replay memory
 				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.next_batch(batch_size)
+
 				# Get action values of batch_states
 				# q_values_states = tn.predict(sess, batch_states)
 
 				# Get the action values of batch_next_states
 				# we only need this one
-				q_values_next_states = tn.predict(sess, batch_next_states)
+				q_values_next_states = tn.predict(sess, [batch_next_states])
+				print("ZZZ",q_values_next_states)
+				print("XXXX", np.amax(q_values_next_states, axis=1))
+				exit()
+
 				batch_targets = batch_rewards + np.invert(batch_dones).astype(np.float32) * discount_factor * np.amax(q_values_next_states, axis=1)
 
 				# Perform gradient descent update
@@ -254,20 +217,20 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				# # Compute td-target, then action values for each experience from memory 
 				# for i,state in enumerate(batch_states):
 
-				# 	# Get action values of each next state from the batch
-				# 	q_next = q_values_next_states[i]
+				#   # Get action values of each next state from the batch
+				#   q_next = q_values_next_states[i]
 
-				# 	# Pick the best action greedily
-				# 	max_action = np.argmax(q_next)
+				#   # Pick the best action greedily
+				#   max_action = np.argmax(q_next)
 
-				# 	# Compute td-target
-				# 	if done:
-				# 		target = batch_rewards[i]
-				# 	else:
-				# 		target = batch_rewards[i]+discount_factor * q_next[max_action]
+				#   # Compute td-target
+				#   if done:
+				#       target = batch_rewards[i]
+				#   else:
+				#       target = batch_rewards[i]+discount_factor * q_next[max_action]
 
-				# 	# Update action values with td-target
-				# 	q_values_states[i][batch_actions[i]]=target
+				#   # Update action values with td-target
+				#   q_values_states[i][batch_actions[i]]=target
 
 				# # Compute the loss and update the approx network
 				# # q_values_states t must be 128x1
@@ -279,28 +242,32 @@ def q_learning(sess,env, approx, num_episodes, max_time_per_episode, discount_fa
 				# Now we consider that we are in the next state, and we look further from the view of the 
 				# greedy policy pi, that is we choose the next next action from the next state
 				q_values_next = approx.predict(sess, [next_state])
-				#print(q_values_next)
+				print("v_next:",q_values_next)
+				print("next state",next_state)
 
 				# Pick the best action greedily
-				best_action = np.argmax(q_values_next)
-				#print(best_action)
+				best_action = np.argmax(q_values_next[0])
+				print("best a ind: ",best_action)
 				# Compute td-targets  
 				if done:
 					td_target = reward
 				else:
 					td_target = reward + discount_factor * q_values_next[best_action]
+				print("state")
+				print(state.shape)
 
-				#print(q_values_next[best_action])
+				#print(q_values_next[0][best_action])
 
 				# Update action values with td-target
-				#q_values_next[best_action]=td_target
+				#q_values_next[0][best_action]=td_target
 
 				# Compute the loss between greedy policy and epsilon greedy policy
 				# q_values_next must be 1x1
 				# loss = approx.update(sess, [state], [action], q_values_next)
-				#print(td_target)
-				#exit()
+				print("td t:",td_target.shape)
+				exit()
 				loss = approx.update(sess, [state], [action], [td_target])
+
 
 				# !!!! nn outputs all actions but we need to pick the one with the specific action-state pair
 

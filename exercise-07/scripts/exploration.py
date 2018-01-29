@@ -30,6 +30,12 @@ def epsilon_greedy(mab, epsilon):
 
   return action_index[0]
 
+"""
+	take a rand sample random.uniforsm
+
+	if rand<epsilom return random(mab)
+	else return np.argmax(mab.q.bandit_q_values)
+"""
 
 def decaying_epsilon_greedy(mab, epsilon, schedule):
   # Implement this!
@@ -48,11 +54,15 @@ def random(mab):
 
 def ucb1(mab):
   # Implement this!
+
+  """
+	return np.argmax(mab.banditq val + sqrt(2*log(mab.step count + 1)/(mab.bandit_counter + 1)))
+  """
   actions = []
   for i in range(mab.no_actions):
     if mab.bandit_counters[i] == 0:
         # if the action i is never tried before, give it a high upper bound so that maximize its q-value
-        actions.append(mab.bandit_q_values[i] + 0.9)
+        actions.append(mab.bandit_q_values[i] + np.sqrt(2 * np.log(mab.step_counter + 1) * np.reciprocal(mab.bandit_counters[i] + 1)))
     else:
         actions.append(mab.bandit_q_values[i] + np.sqrt(2 * np.log(mab.step_counter) * np.reciprocal(mab.bandit_counters[i])))
   # Which arm(bandit)?
@@ -151,7 +161,10 @@ if __name__ == '__main__':
   eps = []
   def schedule(mab, epsilon):
     # Implement this!
-
+    """
+    simple linear decay
+    return epsilon - 1e-6*mab.step_counter
+    """
     # Simple exponential decay 
     decaying_factor = 100000
 
@@ -160,9 +173,9 @@ if __name__ == '__main__':
   epsilon = 0.5
 
   strategies = {
-    epsilon_greedy: {'epsilon': epsilon},
-    decaying_epsilon_greedy: {'epsilon': epsilon, 'schedule': schedule},
-    random: {},
+    #epsilon_greedy: {'epsilon': epsilon},
+    #decaying_epsilon_greedy: {'epsilon': epsilon, 'schedule': schedule},
+    #random: {},
     ucb1: {}
   }
 
@@ -186,6 +199,7 @@ if __name__ == '__main__':
 
   for strategy, parameters in strategies.items():
     # Creates bandits with given biases, for bias 0.2, 0.2 is for bias and (1 - 0.2) = 0.8 is for q_value 
+    # set 1-bias to zero for the schedule from lecture
     bandits = [Bandit(bias, 1-bias) for bias in biases]
 
     # with all the individual bandits, a multi armed bandit with best action index 0 is created

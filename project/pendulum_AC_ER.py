@@ -117,6 +117,31 @@ class CriticNetwork():
 		# Compute loss and update
 		sess.run([self.train_op, self.loss],feed_dict)
 
+class CriticTargetNetwork(CriticNetwork):
+	"""
+	Slowly updated target network. Tau indicates the speed of adjustment. If 1,
+	it is always set to the values of its associate.
+	"""
+	def __init__(self, tau=0.001):
+		CriticNetwork.__init__(self)
+		
+		self.tau = tau
+		self._associate = self._register_associate()
+
+	def _register_associate(self):
+		tf_vars = tf.trainable_variables()
+		total_vars = len(tf_vars)
+		op_holder = []
+
+		for idx, var in enumerate(tf_vars[0:total_vars//2]):
+			op_holder.append(tf_vars[idx+total_vars//2].assign((var.value()*self.tau) + ((1-self.tau)*tf_vars[idx+total_vars//2].value())))
+
+		return op_holder
+		
+	def update(self, sess):
+		for op in self._associate:
+			sess.run(op)
+
 class ActorNetwork():
 	def __init__(self, learning_rate, 
 					   action_space_size, 
@@ -201,6 +226,32 @@ class ActorNetwork():
 		feed_dict = { self.states_pl: s, self.targets_pl: y, self.actions_pl: a }
 		sess.run(self.train_op, feed_dict)
 
+
+class ActionTargetNetwork(ActorNetwork):
+	"""
+	Slowly updated target network. Tau indicates the speed of adjustment. If 1,
+	it is always set to the values of its associate.
+	"""
+	def __init__(self, tau=0.001):
+		ActorNetwork.__init__(self)
+		
+		self.tau = tau
+		self._associate = self._register_associate()
+
+	def _register_associate(self):
+		tf_vars = tf.trainable_variables()
+		total_vars = len(tf_vars)
+		op_holder = []
+
+		for idx, var in enumerate(tf_vars[0:total_vars//2]):
+			op_holder.append(tf_vars[idx+total_vars//2].assign((var.value()*self.tau) + ((1-self.tau)*tf_vars[idx+total_vars//2].value())))
+
+		return op_holder
+		
+	def update(self, sess):
+		for op in self._associate:
+			sess.run(op)
+
 class ReplayBuffer:
 	#Replay buffer for experience replay. Stores transitions.
 	def __init__(self):
@@ -283,14 +334,14 @@ def pendulum(sess, env, actor, critic, num_episodes, max_time_per_episode, disco
 
 	return stats
 
-def plot_episode_stats(stats, smoothing_window=10, noshow=False):
+def plot_episode_stats(stats, i ,smoothing_window=10, noshow=True):
 	# Plot the episode length over time
 	fig1 = plt.figure(figsize=(10,5))
 	plt.plot(stats.episode_lengths)
 	plt.xlabel("Episode")
 	plt.ylabel("Episode Length")
 	plt.title("Episode Length over Time")
-	fig1.savefig('episode_lengths.png')
+	fig1.savefig('Model_'+ str(i) + '_episode_lengths.png')
 	if noshow:
 		plt.close(fig1)
 	else:
@@ -303,7 +354,7 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 	plt.xlabel("Episode")
 	plt.ylabel("Episode Reward (Smoothed)")
 	plt.title("Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
-	fig2.savefig('reward.png')
+	fig2.savefig('Model_'+ str(i) + '_reward.png')
 	if noshow:
 		plt.close(fig2)
 	else:
@@ -313,6 +364,11 @@ if __name__ == "__main__":
 	stats = []
 	reward_func = True
 	env = PendulumEnv(reward_func)
+	state_dim = env.observation_space.shape
+	action_dim = env.action_space.shape
+	print(state_dim)
+	print(action_dim)
+	exit()
 
 	config_dict = {}
 	budget = 20
@@ -359,7 +415,12 @@ if __name__ == "__main__":
 		print("--- %s seconds ---" % (time.time() - start_time))
 
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
-		plot_episode_stats(stats[i])
+		plot_episode_stats(stats[i], i)
+		name = 'Model_' + str(i) + '_configs.txt'
+		configs = ("Configuration used: ", config_dict.get("config_dict{0}".format(i)))
+		np.savetxt(name, configs, fmt='%5s', delimiter=',')
+		
+	#plot_episode_stats(stats, i)
 
 	#plot_episode_stats(stats)
 

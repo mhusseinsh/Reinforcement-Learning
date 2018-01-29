@@ -11,7 +11,7 @@ class PendulumEnv(gym.Env):
         'video.frames_per_second' : 30
     }
 
-    def __init__(self, reward_function=None):
+    def __init__(self, reward_function = None):
         self.max_speed=8
         self.max_torque=2.
         self.dt=.05
@@ -28,6 +28,9 @@ class PendulumEnv(gym.Env):
                 return 1 if -0.1 <= angle_normalize(pendulum.state[0]) <= 0.1 else 0
             self.reward = reward
         else:
+            def reward_function(pendulum, th, thdot):
+                cost = angle_normalize(th)**2 + .1*thdot**2 + .001*(pendulum.last_u**2)
+                return -cost
             self.reward = reward_function
 
     def _seed(self, seed=None):
@@ -48,7 +51,7 @@ class PendulumEnv(gym.Env):
         newth = th + newthdot*dt
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed)
 
-        reward = self.reward(self)
+        reward = self.reward(self, th, thdot)
         
         self.state = np.array([newth, newthdot])
         

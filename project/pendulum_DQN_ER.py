@@ -146,7 +146,13 @@ class TargetNetwork(NeuralNetwork):
 	it is always set to the values of its associate.
 	"""
 	def __init__(self, tau=0.001):
-		NeuralNetwork.__init__(self)
+		NeuralNetwork.__init__(self, NeuralNetwork.learning_rate,
+		NeuralNetwork.action_space_size,
+		NeuralNetwork.num_fc_units_1,
+		NeuralNetwork.num_fc_units_2,
+		NeuralNetwork.num_fc_units_3,
+		NeuralNetwork.num_fc_units_4)
+		
 		self.tau = tau
 		self._associate = self._register_associate()
 
@@ -357,6 +363,10 @@ if __name__ == "__main__":
 			config_dict.get("config_dict{0}".format(i)).get('num_episodes'), 
 			200,
 			config_dict.get("config_dict{0}".format(i)).get('discount_factor')))
+			#,
+			#use_experience_replay = True,
+			#config_dict.get("config_dict{0}".format(i)).get('batch_size'),
+			#target = target))
 
 
 		print("--- %s seconds ---" % (time.time() - start_time))

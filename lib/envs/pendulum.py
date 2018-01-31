@@ -11,11 +11,12 @@ class PendulumEnv(gym.Env):
         'video.frames_per_second' : 30
     }
 
-    def __init__(self, reward_function = None):
+    def __init__(self, reward_function):
         self.max_speed=8
         self.max_torque=2.
         self.dt=.05
         self.viewer = None
+        self.use_reward_function = reward_function
 
         high = np.array([1., 1., self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,))
@@ -23,7 +24,16 @@ class PendulumEnv(gym.Env):
 
         self._seed()
 
-        if reward_function is None:
+        """if reward_function is None:
+                                    def reward(pendulum):
+                                        return 1 if -0.1 <= angle_normalize(pendulum.state[0]) <= 0.1 else 0
+                                    self.reward = reward
+                                else:
+                                    def reward_function(pendulum, th, thdot):
+                                        cost = angle_normalize(th)**2 + .1*thdot**2 + .001*(pendulum.last_u**2)
+                                        return -cost
+                                    self.reward = reward_function"""
+        if self.use_reward_function is False:
             def reward(pendulum):
                 return 1 if -0.1 <= angle_normalize(pendulum.state[0]) <= 0.1 else 0
             self.reward = reward
@@ -39,6 +49,7 @@ class PendulumEnv(gym.Env):
 
     def step(self,u):
         th, thdot = self.state
+        #print("in step func",th, thdot)
 
         g = 10.
         m = 1.
@@ -47,12 +58,19 @@ class PendulumEnv(gym.Env):
 
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
         self.last_u = u
+        #print("action in env: ",self.last_u)
+
         newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
+
         newth = th + newthdot*dt
+
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed)
 
-        reward = self.reward(self, th, thdot)
-        
+        if self.use_reward_function is False:
+            reward = self.reward(self)
+        else:
+            reward = self.reward(self, th, thdot)
+        #print("i am here: ", newth, newthdot)
         self.state = np.array([newth, newthdot])
         
         return self._get_obs(), reward, False, {}
@@ -65,6 +83,8 @@ class PendulumEnv(gym.Env):
 
     def _get_obs(self):
         theta, thetadot = self.state
+
+        #print("in get obs: ",np.cos(theta), np.sin(theta))
         return np.array([np.cos(theta), np.sin(theta), thetadot])
 
     def render(self, mode='human', close=False):

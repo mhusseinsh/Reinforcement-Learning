@@ -18,7 +18,7 @@ from pendulum import PendulumEnv
 
 EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
 reward_func = True
-env = PendulumEnv(reward_function = False)
+env = PendulumEnv(reward_function = reward_func)
 state_space_size = env.observation_space.shape[0]
 action_bound = 2
 action_space_size = env.action_space.shape[0]
@@ -51,7 +51,7 @@ class CriticNetwork():
 		self.loss = tf.reduce_mean(self.losses)
 
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0005)
+		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
 		self.train_op = self.optimizer.minimize(self.loss)
 		
 		self.action_gradient = tf.gradients(self.action_value, self.action)
@@ -60,39 +60,18 @@ class CriticNetwork():
 		state = tf.placeholder(shape=[None, state_space_size], dtype=tf.float32)
 		action = tf.placeholder(shape=[None, action_space_size], dtype=tf.float32)
 
-		# first alternative
-		# Create fully connected layers such that one is the others's input
 		fc1 = tf.contrib.layers.fully_connected(state, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-		fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
+		fc2 = tf.contrib.layers.fully_connected(action, 200, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
-		fc3 = tf.contrib.layers.fully_connected(action, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		concat = tf.concat([fc1, fc2], axis = 1)
 
-		#concat = tf.concat(fc2, fc3)
-		concat = fc2 + fc3
+		fc3 = tf.contrib.layers.fully_connected(concat, 400, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
-		action_value = tf.contrib.layers.fully_connected(concat, action_space_size,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-		# CLOSE UNTIL HERE
-
-		"""#second alternative:
-
-		#MOSTAFA 1, ARLETTE 0
-								concat = tf.concat([state, action], 1)
-								concat = tf.concat([state, action], 0)
-								# Create fully connected layers such that one is the others's input
-								fc1 = tf.contrib.layers.fully_connected(concat, 200, activation_fn=tf.nn.relu,
-								  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-								fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
-								  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-						
-								fc3 = tf.contrib.layers.fully_connected(fc2, 300, activation_fn=tf.nn.relu,
-								  weights_initializer=tf.random_uniform_initializer(0, 0.5))
-						
-								action_value = tf.contrib.layers.fully_connected(fc3, action_space_size,
-								  weights_initializer=tf.random_uniform_initializer(0, 0.5))"""
+		action_value = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=None,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		return (state, action, action_value)
 
@@ -145,7 +124,7 @@ class ActorNetwork():
 
 		self.normalized_actor_gradients = list(map(lambda x: tf.div(x, self.batch_size), self.actor_gradients))
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0005).apply_gradients(zip(self.actor_gradients, self.network_params))
+		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.actor_gradients, self.network_params))
 		
 		self.num_trainable_vars = len(
 			self.network_params) + len(self.target_network_params)
@@ -156,13 +135,13 @@ class ActorNetwork():
 		batch_size = tf.shape(states_pl)[0]
 
 		fc1 = tf.contrib.layers.fully_connected(states_pl, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		fc3 = tf.contrib.layers.fully_connected(fc2, 400, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		unscaled_output = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=tf.nn.tanh,
-		  weights_initializer=tf.random_uniform_initializer(0, 0.5))
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		output = tf.multiply(unscaled_output,action_bound)
 
@@ -211,7 +190,31 @@ class ReplayBuffer:
 		batch_dones = np.array([self._data.dones[i] for i in batch_indices])
 		return batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones
 
-def pendulum(sess, env, actor, critic, num_episodes = 5000, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 128):
+	def size(self):
+		return len(self._data.states)
+
+class OrnsteinUhlenbeckActionNoise:
+    def __init__(self, mu, sigma=0.3, theta=.15, dt=1e-2, x0=None):
+        self.theta = theta
+        self.mu = mu
+        self.sigma = sigma
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def __call__(self):
+        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
+                self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+        self.x_prev = x
+        return x
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
+
+    def __repr__(self):
+        return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
+
+def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 64):
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
@@ -236,45 +239,49 @@ def pendulum(sess, env, actor, critic, num_episodes = 5000, max_time_per_episode
 			if (stats.episode_lengths[i_episode] + 1) == max_time_per_episode:
 				break
 
-			action = actor.predict(sess, np.reshape(state, (1, 3)))
+			action = actor.predict(sess, np.reshape(state, (1, 3))) + actor_noise()
 
 			next_state, reward, done, _ = env.step(action[0])
 			
 			replay_memory.add_transition(state, action, next_state, reward, done)
 
-			batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.sample_batch(batch_size)
-			
-			action_from_target = actor.predict_target(sess, batch_next_states)
+			if replay_memory.size() * 3 > batch_size:
 
-			target_q_values = critic.predict_target(sess, batch_next_states, action_from_target)
+				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.sample_batch(batch_size)
+				
+				action_from_target = actor.predict_target(sess, batch_next_states)
 
-			y_i = []
+				target_q_values = critic.predict_target(sess, batch_next_states, action_from_target)
 
-			for k in range(batch_size):
-				if batch_dones[k]:
-					y_i.append(batch_rewards[k])
-				else:
-					y_i.append(batch_rewards[k] + discount_factor * target_q_values[k])
-			  
-			critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(y_i,(batch_size, 1)))
-			action_from_actor = actor.predict(sess,batch_states)
-			
-			gradients = critic.action_gradients(sess,batch_states, action_from_actor)
+				y_i = []
 
-			#gradients[0]
-			actor.update(sess,batch_states, gradients[0])
+				for k in range(batch_size):
+					if batch_dones[k]:
+						y_i.append(batch_rewards[k])
+					else:
+						y_i.append(batch_rewards[k] + discount_factor * target_q_values[k])
+				  
+				critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(y_i,(batch_size, 1)))
+				action_from_actor = actor.predict(sess,batch_states)
+				
+				gradients = critic.action_gradients(sess,batch_states, action_from_actor)
 
-			actor.update_target(sess)
-			critic.update_target(sess)
+				#gradients[0]
+				actor.update(sess,batch_states, gradients[0])
 
-			# Update statistics
-			stats.episode_rewards[i_episode] += reward
-			stats.episode_lengths[i_episode] = t
+				actor.update_target(sess)
+				critic.update_target(sess)
+
+				# Update statistics
+				stats.episode_rewards[i_episode] += reward
+				stats.episode_lengths[i_episode] = t
+
+				state = next_state
 
 			if done:
 				break
 
-			state = next_state
+			
 
 
 
@@ -314,13 +321,14 @@ if __name__ == "__main__":
 
 	critic = CriticNetwork(actor.get_num_trainable_vars())
 
+	actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_space_size))
 
 	sess = tf.Session()
 	start_time = time.time()
 	print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 	sess.run(tf.global_variables_initializer())
 
-	stats = pendulum(sess, env, actor, critic)
+	stats = pendulum(sess, env, actor, critic, actor_noise)
 
 	print("--- %s seconds ---" % (time.time() - start_time))
 

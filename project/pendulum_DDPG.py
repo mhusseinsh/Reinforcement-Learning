@@ -60,20 +60,25 @@ class CriticNetwork():
 		state = tf.placeholder(shape=[None, state_space_size], dtype=tf.float32)
 		action = tf.placeholder(shape=[None, action_space_size], dtype=tf.float32)
 
-		weights_regularizer = tf.contrib.layers.l2_regularizer(0.01)
+		weights_regularizer = tf.contrib.layers.l1_regularizer(0.01)
 
 		fc1 = tf.contrib.layers.fully_connected(state, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		fc2 = tf.contrib.layers.fully_connected(action, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		concat = tf.concat([fc1, fc2], axis = 1)
 
-		fc3 = tf.contrib.layers.fully_connected(concat, 400, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		#concat = tf.concat([state, action], axis = 1)
+
+		fc3 = tf.contrib.layers.fully_connected(concat, 300, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
+
+		#dropout = tf.layers.dropout(fc3, 0.2)
+
 
 		action_value = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=None,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		return (state, action, action_value)
 
@@ -124,10 +129,10 @@ class ActorNetwork():
 
 		self.actor_gradients = tf.gradients(self.output, self.network_params, -self.action_gradient)
 
-		self.normalized_actor_gradients = list(map(lambda x: tf.div(x, self.batch_size), self.actor_gradients))
-		print(normalized_actor_gradients)
+		#self.normalized_actor_gradients = list(map(lambda x: tf.div(x, self.batch_size), self.actor_gradients))
+		#print(normalized_actor_gradients)
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.normalized_actor_gradients, self.network_params))
+		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.actor_gradients, self.network_params))
 		
 		self.num_trainable_vars = len(
 			self.network_params) + len(self.target_network_params)
@@ -140,13 +145,14 @@ class ActorNetwork():
 		batch_size = tf.shape(states_pl)[0]
 
 		fc1 = tf.contrib.layers.fully_connected(states_pl, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 		fc3 = tf.contrib.layers.fully_connected(fc2, 400, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
-		unscaled_output = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=tf.nn.tanh,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
+		dropout = tf.layers.dropout(fc3, 0.2)
+		unscaled_output = tf.contrib.layers.fully_connected(dropout, action_space_size, activation_fn=tf.nn.tanh,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		output = tf.multiply(unscaled_output,action_bound)
 
@@ -217,7 +223,7 @@ class OrnsteinUhlenbeckActionNoise:
     def __repr__(self):
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
 
-def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 64):
+def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 50, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 64):
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
@@ -248,7 +254,7 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 			
 			replay_memory.add_transition(state, action, next_state, reward, done)
 
-			if replay_memory.size() > batch_size * 3:
+			if replay_memory.size() > batch_size:
 
 				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.sample_batch(batch_size)
 				
@@ -275,18 +281,14 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 				actor.update_target(sess)
 				critic.update_target(sess)
 
-				# Update statistics
-				stats.episode_rewards[i_episode] += reward
-				stats.episode_lengths[i_episode] = t
+			# Update statistics
+			stats.episode_rewards[i_episode] += reward
+			stats.episode_lengths[i_episode] = t
 
-				state = next_state
+			state = next_state
 
-			if done:
-				break
-
-			
-
-
+		if done:
+			break
 
 	return stats
 
@@ -337,3 +339,12 @@ if __name__ == "__main__":
 
 	print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 	plot_episode_stats(stats)
+
+	for _ in range(5):
+		state = env.reset()
+		for i in range(200):
+		  env.render()
+		  _, _, done, _ = env.step(actor.predict(sess, np.reshape(state, (1, 3))))
+		  if done:
+		    break
+

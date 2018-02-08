@@ -216,9 +216,9 @@ def reinforce(sess, env, policy, best_policy, num_episodes, discount_factor=1.0)
       # Only log the best policy if the episode is done
       if done:
         # Only log the best_policy if it was better than the previous best_policy one
-        if best_policy_reward < stats.episode_rewards[i_episode]:
-          best_policy_reward = stats.episode_rewards[i_episode]
-          best_policy.update(sess)
+        """if best_policy_reward < stats.episode_rewards[i_episode]:
+                                  best_policy_reward = stats.episode_rewards[i_episode]
+                                  best_policy.update(sess)"""
 
         break
 

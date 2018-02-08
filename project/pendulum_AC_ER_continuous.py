@@ -181,7 +181,28 @@ class ReplayBuffer:
 		batch_dones = np.array([self._data.dones[i] for i in batch_indices])
 		return batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones
 
-def pendulum(sess, env, actor, critic, num_episodes = 200, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 128):
+class OrnsteinUhlenbeckActionNoise:
+    def __init__(self, mu, sigma=0.3, theta=.15, dt=1e-2, x0=None):
+        self.theta = theta
+        self.mu = mu
+        self.sigma = sigma
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def __call__(self):
+        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
+                self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+        self.x_prev = x
+        return x
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
+
+    def __repr__(self):
+        return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
+
+def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 5000, max_time_per_episode = 200, discount_factor = 0.9, batch_size = 128):
 
 	# Keeps track of useful statistics
 	stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards=np.zeros(num_episodes))
@@ -206,7 +227,7 @@ def pendulum(sess, env, actor, critic, num_episodes = 200, max_time_per_episode 
 			if (stats.episode_lengths[i_episode] + 1) == max_time_per_episode:
 				break
 
-			action = actor.predict(sess, np.reshape(state, (1, 3)))
+			action = actor.predict(sess, np.reshape(state, (1, 3))) + actor_noise()
 
 
 			next_state, reward, done, _ = env.step(action[0])
@@ -276,13 +297,15 @@ if __name__ == "__main__":
 
 	critic = CriticNetwork(actor.get_num_trainable_vars())
 
+	actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_space_size))
+
 
 	sess = tf.Session()
 	start_time = time.time()
 	print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 	sess.run(tf.global_variables_initializer())
 
-	stats = pendulum(sess, env, actor, critic)
+	stats = pendulum(sess, env, actor, critic, actor_noise)
 
 	print("--- %s seconds ---" % (time.time() - start_time))
 

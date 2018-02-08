@@ -53,48 +53,50 @@ class CriticNetwork():
 
 		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
 		self.train_op = self.optimizer.minimize(self.loss)
-		
+
 		self.action_gradient = tf.gradients(self.action_value, self.action)
 
 	def _build_model(self):
 		state = tf.placeholder(shape=[None, state_space_size], dtype=tf.float32)
 		action = tf.placeholder(shape=[None, action_space_size], dtype=tf.float32)
 
-		weights_regularizer = tf.contrib.layers.l2_regularizer(0.01)
+		#weights_regularizer = tf.contrib.layers.l1_regularizer(0.01)
 
 		fc1 = tf.contrib.layers.fully_connected(state, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
+		#fc11 = tf.contrib.layers.fully_connected(fc1, 200, activation_fn=tf.nn.relu,
+		#  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 		fc2 = tf.contrib.layers.fully_connected(action, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 
 		concat = tf.concat([fc1, fc2], axis = 1)
 
 		fc3 = tf.contrib.layers.fully_connected(concat, 400, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 
 		action_value = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=None,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 
 		return (state, action, action_value)
 
 	def action_gradients(self, sess, states, actions):
-		
-		
+
+
 		return sess.run(self.action_gradient, { self.state: states, self.action: actions})
 
 	def predict(self, sess, states, actions):
-	
+
 		prediction = sess.run(self.action_value, { self.state: states, self.action: actions})
 		# will return n action predictions
 		return prediction
 
 	def predict_target(self, sess, states, actions):
-	
+
 		return sess.run(self.action_value_target, { self.state_target: states, self.action_target: actions})
 
 	def update(self, sess, states, actions, predicted_q):
-		
-		# Get input (states), labels (actions), and predictions (targets) 
+
+		# Get input (states), labels (actions), and predictions (targets)
 		feed_dict = { self.state: states, self.action: actions, self.predicted_q: predicted_q }
 
 		# Compute loss and update
@@ -124,29 +126,29 @@ class ActorNetwork():
 
 		self.actor_gradients = tf.gradients(self.output, self.network_params, -self.action_gradient)
 
-		self.normalized_actor_gradients = list(map(lambda x: tf.div(x, self.batch_size), self.actor_gradients))
-		print(normalized_actor_gradients)
+		#self.normalized_actor_gradients = list(map(lambda x: tf.div(x, self.batch_size), self.actor_gradients))
+		#print(self.normalized_actor_gradients)
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.normalized_actor_gradients, self.network_params))
-		
+		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.actor_gradients, self.network_params))
+
 		self.num_trainable_vars = len(
 			self.network_params) + len(self.target_network_params)
 
 	def _build_model(self):
 		states_pl = tf.placeholder(shape=[None, state_space_size], dtype=tf.float32)
 
-		weights_regularizer = tf.contrib.layers.l2_regularizer(0.01)
+		#weights_regularizer = tf.contrib.layers.l1_regularizer(0.01)
 
 		batch_size = tf.shape(states_pl)[0]
 
 		fc1 = tf.contrib.layers.fully_connected(states_pl, 200, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 		fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 		fc3 = tf.contrib.layers.fully_connected(fc2, 400, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 		unscaled_output = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=tf.nn.tanh,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003), weights_regularizer = weights_regularizer)
+		  weights_initializer=tf.random_uniform_initializer(-0.001,0.001))
 
 		output = tf.multiply(unscaled_output,action_bound)
 
@@ -226,11 +228,11 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 
 	actor.update_target(sess)
 	critic.update_target(sess)
-	
+
 	for i_episode in range(num_episodes):
 		# Print out which episode we're on, useful for debugging.
 		# Also print reward for last episode
-		print("Episode {}/{} ({})".format(i_episode + 1, 
+		print("Episode {}/{} ({})".format(i_episode + 1,
 			num_episodes, stats.episode_rewards[i_episode - 1]),end='\r')
 		sys.stdout.flush()
 
@@ -245,13 +247,13 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 			action = actor.predict(sess, np.reshape(state, (1, 3))) + actor_noise()
 
 			next_state, reward, done, _ = env.step(action[0])
-			
+
 			replay_memory.add_transition(state, action, next_state, reward, done)
 
 			if replay_memory.size() > batch_size * 3:
 
 				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.sample_batch(batch_size)
-				
+
 				action_from_target = actor.predict_target(sess, batch_next_states)
 
 				target_q_values = critic.predict_target(sess, batch_next_states, action_from_target)
@@ -263,10 +265,10 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 						y_i.append(batch_rewards[k])
 					else:
 						y_i.append(batch_rewards[k] + discount_factor * target_q_values[k])
-				  
+
 				critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(y_i,(batch_size, 1)))
 				action_from_actor = actor.predict(sess,batch_states)
-				
+
 				gradients = critic.action_gradients(sess,batch_states, action_from_actor)
 
 				#gradients[0]
@@ -284,7 +286,7 @@ def pendulum(sess, env, actor, critic, actor_noise, num_episodes = 300, max_time
 			if done:
 				break
 
-			
+
 
 
 
@@ -318,7 +320,7 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 
 if __name__ == "__main__":
 	stats = []
-	
+
 
 	actor = ActorNetwork(batch_size = 128)
 

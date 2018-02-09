@@ -40,7 +40,7 @@ class CriticNetwork():
 
 		self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
 		self.train_op = self.optimizer.minimize(self.loss)
-		
+
 		self.action_gradient = tf.gradients(self.action_value, self.action)
 
 	def _build_model(self):
@@ -68,21 +68,31 @@ class CriticNetwork():
 		return (state, action, action_value)
 
 	def action_gradients(self, sess, states, actions):
+<<<<<<< HEAD
 		
+=======
+
+
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 		return sess.run(self.action_gradient, { self.state: states, self.action: actions})
 
 	def predict(self, sess, states, actions):
-	
+
 		prediction = sess.run(self.action_value, { self.state: states, self.action: actions})
 
 		return prediction
 
 	def predict_target(self, sess, states, actions):
-	
+
 		return sess.run(self.action_value_target, { self.state_target: states, self.action_target: actions})
 
 	def update(self, sess, states, actions, predicted_q):
+<<<<<<< HEAD
 		
+=======
+
+		# Get input (states), labels (actions), and predictions (targets)
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 		feed_dict = { self.state: states, self.action: actions, self.predicted_q: predicted_q }
 
 		sess.run([self.action_value, self.train_op],feed_dict)
@@ -115,14 +125,14 @@ class ActorNetwork():
 		self.actor_gradients = tf.gradients(self.output, self.network_params, -self.action_gradient)
 
 		self.optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001).apply_gradients(zip(self.actor_gradients, self.network_params))
-		
+
 		self.num_trainable_vars = len(
 			self.network_params) + len(self.target_network_params)
 
 	def _build_model(self):
 		states_pl = tf.placeholder(shape=[None, state_space_size], dtype=tf.float32)
 
-		weights_regularizer = tf.contrib.layers.l2_regularizer(0.01)
+		#weights_regularizer = tf.contrib.layers.l1_regularizer(0.01)
 
 		batch_size = tf.shape(states_pl)[0]
 
@@ -227,10 +237,16 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 
 	actor.update_target(sess)
 	critic.update_target(sess)
-	
+
 	for i_episode in range(num_episodes):
+<<<<<<< HEAD
 
 		print("Episode {}/{} ({})".format(i_episode + 1, 
+=======
+		# Print out which episode we're on, useful for debugging.
+		# Also print reward for last episode
+		print("Episode {}/{} ({})".format(i_episode + 1,
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 			num_episodes, stats.episode_rewards[i_episode - 1]),end='\r')
 		sys.stdout.flush()
 
@@ -243,17 +259,28 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 
 			action = actor.predict(sess, np.reshape(state, (1, 3))) + actor_noise()
 
+<<<<<<< HEAD
 			next_state, reward, _, _ = env.step(action[0])
 
 			if replay_memory.size() >= num_episodes:
 				replay_memory = replay_memory.clear()
 			
 			replay_memory.add_transition(state, action, next_state, reward)
+=======
+			next_state, reward, done, _ = env.step(action[0])
+
+			replay_memory.add_transition(state, action, next_state, reward, done)
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 
 			if replay_memory.size() > batch_size * 3:
 
+<<<<<<< HEAD
 				batch_states, batch_actions, batch_next_states, batch_rewards = replay_memory.sample_batch(batch_size)
 				
+=======
+				batch_states, batch_actions, batch_next_states, batch_rewards, batch_dones = replay_memory.sample_batch(batch_size)
+
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 				action_from_target = actor.predict_target(sess, batch_next_states)
 
 				target_q_values = critic.predict_target(sess, batch_next_states, action_from_target)
@@ -261,11 +288,20 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 				td_targets = []
 
 				for k in range(batch_size):
+<<<<<<< HEAD
 					td_targets.append(batch_rewards[k] + discount_factor * target_q_values[k])
 				  
 				critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(td_targets,(batch_size, 1)))
+=======
+					if batch_dones[k]:
+						y_i.append(batch_rewards[k])
+					else:
+						y_i.append(batch_rewards[k] + discount_factor * target_q_values[k])
+
+				critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(y_i,(batch_size, 1)))
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 				action_from_actor = actor.predict(sess,batch_states)
-				
+
 				gradients = critic.action_gradients(sess,batch_states, action_from_actor)
 
 				actor.update(sess,batch_states, gradients[0])
@@ -339,6 +375,11 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+=======
+	stats = []
+
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823
 
 	reward_func = True
 	env = PendulumEnv(reward_function = reward_func)
@@ -383,6 +424,7 @@ if __name__ == "__main__":
 	for e in range(evaluation):
 		print("Evaluation phase ",e, " starts....")
 		state = env.reset()
+<<<<<<< HEAD
 		for _ in range(max_time_per_episode):
 		  #env.render()
 		  action = actor.predict(sess, np.reshape(state, (1, 3)))
@@ -406,3 +448,10 @@ if __name__ == "__main__":
 
 		  
 
+=======
+		for i in range(200):
+		  env.render()
+		  _, _, done, _ = env.step(actor.predict(sess, np.reshape(state, (1, 3))))
+		  if done:
+		    break
+>>>>>>> 09a5293370b9e787716e3a615ae2291569368823

@@ -197,7 +197,7 @@ class ReplayBuffer:
 		for t in range(len(temp_actions)):
 			new_replay.add_transition(temp_states[t], temp_actions[t], temp_next_states[t], temp_rewards[t])
 
-		return new_replay	
+		return new_replay
 
 	def size(self):
 		return len(self._data.states)
@@ -232,7 +232,7 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 
 	for i_episode in range(num_episodes):
 
-		print("Episode {}/{} ({})".format(i_episode + 1, 
+		print("Episode {}/{} ({})".format(i_episode + 1,
 			num_episodes, stats.episode_rewards[i_episode - 1]),end='\r')
 		sys.stdout.flush()
 
@@ -250,7 +250,7 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 			loss = 0
 			if replay_memory.size() >= num_episodes:
 				replay_memory = replay_memory.clear()
-			
+
 			replay_memory.add_transition(state, action, next_state, reward)
 
 			if replay_memory.size() > batch_size * 3:
@@ -266,7 +266,7 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 				for k in range(batch_size):
 
 					td_targets.append(batch_rewards[k] + discount_factor * target_q_values[k])
-				  
+
 				loss_log = critic.update(sess,batch_states, np.reshape(batch_actions,(batch_size, 1)), np.reshape(td_targets,(batch_size, 1)))
 				loss = np.mean(loss_log[0])
 
@@ -311,7 +311,7 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		fig2 = plt.figure(figsize=(10,5))
 
 		for i, stat in enumerate(stats):
-			name = 'rewards' + str(i) + '.txt' 
+			name = 'rewards' + str(i) + '.txt'
 			np.savetxt(name, stat.episode_rewards, delimiter=',', fmt='%.8f')
 			rewards = []
 			rewards_mean = []
@@ -330,6 +330,7 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 			plt.ylabel("Episode Reward (Smoothed)")
 			plt.title("Training - Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
 			fig2.savefig('training_reward.png')
+
 
 		plt.legend()
 
@@ -357,6 +358,34 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		else:
 			plt.show(fig3)
 
+		fig4 = plt.figure(figsize=(10,5))
+
+		for i, stat in enumerate(stats):
+			name = 'rewards' + str(i) + '.txt'
+			rewards = []
+			with open(name,'r') as csvfile:
+				plots = csv.reader(csvfile)
+				for row in plots:
+					rewards.append(float(row[0]))
+			#IS IT NEEDED?
+			#rewards_smoothed = pd.Series(stat.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
+			ax = fig4.add_subplot(111)
+			bp = ax.boxplot(rewards)
+			#bp = ax.boxplot(stat.episode_rewards)
+
+			plt.xlabel("Episode")
+			plt.ylabel("Episode Reward (Smoothed)")
+			plt.title("Percentile".format(smoothing_window))
+			fig4.savefig('percentile_reward.png', bbox_inches='tight')
+
+
+		plt.legend()
+
+		if noshow:
+			plt.close(fig3)
+		else:
+			plt.show(fig3)
+
 	else:
 		fig2 = plt.figure(figsize=(10,5))
 
@@ -368,6 +397,7 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		plt.ylabel("Episode Reward (Smoothed)")
 		plt.title("Evaluation - Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
 		fig2.savefig('evaluation_reward.png')
+
 
 		#plt.legend()
 
@@ -400,7 +430,7 @@ if __name__ == "__main__":
 
 	for t in range(train):
 		print("Training epoch ",t," starts...")
-	
+
 		actor = ActorNetwork(action_space_size, batch_size, actor_noise, tau)
 		critic = CriticNetwork(state_space_size, action_space_size, actor.get_num_trainable_vars(), tau)
 

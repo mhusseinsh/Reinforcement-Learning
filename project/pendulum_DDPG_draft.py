@@ -382,9 +382,9 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		plt.legend()
 
 		if noshow:
-			plt.close(fig3)
+			plt.close(fig4)
 		else:
-			plt.show(fig3)
+			plt.show(fig4)
 
 	else:
 		fig2 = plt.figure(figsize=(10,5))

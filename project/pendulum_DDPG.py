@@ -52,17 +52,17 @@ class CriticNetwork():
 
 		concat = tf.concat([fc1, action], axis = 1)
 
-		fc2 = tf.contrib.layers.fully_connected(concat, 300, activation_fn=tf.nn.relu,
+		fc2 = tf.contrib.layers.fully_connected(concat, 400, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		#concat = tf.concat([fc1, fc2], axis = 1)
 
 		#concat = tf.concat([state, action], axis = 1)
 
-		#fc3 = tf.contrib.layers.fully_connected(fc2, 100, activation_fn=tf.nn.relu,
-		#  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
+		fc3 = tf.contrib.layers.fully_connected(fc2, 200, activation_fn=tf.nn.relu,
+		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
-		action_value = tf.contrib.layers.fully_connected(fc2, action_space_size, activation_fn=None,
+		action_value = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=None,
 		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		return (state, action, action_value)
@@ -128,12 +128,12 @@ class ActorNetwork():
 
 		fc1 = tf.contrib.layers.fully_connected(states_pl, 200, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
-		fc2 = tf.contrib.layers.fully_connected(fc1, 200, activation_fn=tf.nn.relu,
+		fc2 = tf.contrib.layers.fully_connected(fc1, 300, activation_fn=tf.nn.relu,
 		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
-		fc3 = tf.contrib.layers.fully_connected(fc2, 300, activation_fn=tf.nn.relu,
-		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
+		#fc3 = tf.contrib.layers.fully_connected(fc2, 300, activation_fn=tf.nn.relu,
+		  #weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
-		unscaled_output = tf.contrib.layers.fully_connected(fc3, action_space_size, activation_fn=tf.nn.tanh,
+		unscaled_output = tf.contrib.layers.fully_connected(fc2, action_space_size, activation_fn=tf.nn.tanh,
 		  weights_initializer=tf.random_uniform_initializer(-0.003, 0.003))
 
 		output = tf.multiply(unscaled_output,action_bound)
@@ -184,7 +184,8 @@ class ReplayBuffer:
 		return batch_states, batch_actions, batch_next_states, batch_rewards
 
 	def clear(self):
-		to_cut = self.num_episodes / 2
+		to_cut = int(round(self.num_episodes * 0.75))
+		#to_cut = self.num_episodes / 2
 		temp_states = self._data.states[to_cut:]
 		temp_actions = self._data.actions[to_cut:]
 		temp_next_states = self._data.next_states[to_cut:]
@@ -192,7 +193,7 @@ class ReplayBuffer:
 
 		new_replay = ReplayBuffer(num_episodes)
 
-		for t in range(to_cut):
+		for t in range(len(temp_actions)):
 			new_replay.add_transition(temp_states[t], temp_actions[t], temp_next_states[t], temp_rewards[t])
 
 		return new_replay	
@@ -229,8 +230,7 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 	critic.update_target(sess)
 
 	for i_episode in range(num_episodes):
-		# Print out which episode we're on, useful for debugging.
-		# Also print reward for last episode
+
 		print("Episode {}/{} ({})".format(i_episode + 1, 
 			num_episodes, stats.episode_rewards[i_episode - 1]),end='\r')
 		sys.stdout.flush()
@@ -251,15 +251,7 @@ def pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes,
 			
 			replay_memory.add_transition(state, action, next_state, reward)
 
-			next_state, reward, _, _ = env.step(action[0])
-
-			replay_memory.add_transition(state, action, next_state, reward)
-
-
 			if replay_memory.size() > batch_size * 3:
-
-
-				batch_states, batch_actions, batch_next_states, batch_rewards = replay_memory.sample_batch(batch_size)
 
 				batch_states, batch_actions, batch_next_states, batch_rewards = replay_memory.sample_batch(batch_size)
 
@@ -297,7 +289,8 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		fig1 = plt.figure(figsize=(10,5))
 
 		for i, stat in enumerate(stats):
-			np.savetxt('q_values.txt',stat.episode_q_values, delimiter=',', fmt='%.8f')
+			name = 'q_values.txt' + str(i)
+			np.savetxt(name,stat.episode_q_values, delimiter=',', fmt='%.8f')
 			plt.plot(stat.episode_q_values, label = i)
 			plt.xlabel("Episode")
 			plt.ylabel("Episode Q Values")
@@ -314,7 +307,8 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		fig2 = plt.figure(figsize=(10,5))
 
 		for i, stat in enumerate(stats):
-			np.savetxt('rew.txt',stat.episode_rewards, delimiter=',', fmt='%.8f')
+			name = 'rew.txt' + str(i)
+			np.savetxt(name, stat.episode_rewards, delimiter=',', fmt='%.8f')
 			rewards_smoothed = pd.Series(stat.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
 			plt.plot(rewards_smoothed, label = i)
 			plt.xlabel("Episode")
@@ -365,7 +359,7 @@ if __name__ == "__main__":
 	batch_size = 64
 	tau = 0.001
 
-	train = 1
+	train = 10
 	stats = []
 	actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_space_size))
 	replay_memory = ReplayBuffer(num_episodes)
@@ -379,10 +373,9 @@ if __name__ == "__main__":
 		sess = tf.Session()
 		start_time = time.time()
 		print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
+
 		sess.run(tf.global_variables_initializer())
 		stats.append(pendulum(sess, env, actor, critic, actor_noise, replay_memory, num_episodes, max_time_per_episode, discount_factor, batch_size))
-
-		print("--- %s seconds ---" % (time.time() - start_time))
 
 		print("Ended at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 

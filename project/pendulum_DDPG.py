@@ -9,8 +9,9 @@ import pandas as pd
 from PIL import Image
 import time
 import datetime
+import csv
 
-from config_space import get_config_space
+#from config_space import get_config_space
 
 if "../lib/envs" not in sys.path:
 	sys.path.append("../lib/envs")
@@ -294,14 +295,31 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 	if title == "Training":
 		fig1 = plt.figure(figsize=(10,5))
 
+		total_q = []
+		total_q_mean = []
+
 		for i, stat in enumerate(stats):
-			name = 'q_values.txt' + str(i)
+			name = 'new_results/' + 'q_values_' + str(i) + '.txt'
 			np.savetxt(name,stat.episode_q_values, delimiter=',', fmt='%.8f')
-			plt.plot(stat.episode_q_values, label = i)
+			q = []
+			q_mean = []
+			with open(name,'r') as csvfile:
+			    plots = csv.reader(csvfile)
+			    for row in plots:
+			        q.append(float(row[0]))
+			        cum_sum = np.cumsum(q)
+			        size = len(q)
+			        q_mean.append(cum_sum[-1] / size)
+			name = 'new_results/' + 'q_mean_' + str(i) + '.txt'
+			np.savetxt(name, q_mean, delimiter=',', fmt='%.8f')
+			q_smoothed = pd.Series(stat.episode_q_values).rolling(smoothing_window, min_periods=smoothing_window).mean()
+			total_q.append(q)
+			total_q_mean.append(q_mean)
+			plt.plot(q_mean, label = i)
 			plt.xlabel("Episode")
 			plt.ylabel("Episode Q Values")
 			plt.title("Training - Episode Q Values")
-			fig1.savefig('training_q_values.png')
+			fig1.savefig('new_results/' + 'training_q_values.png')
 
 		plt.legend()
 
@@ -312,8 +330,11 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 
 		fig2 = plt.figure(figsize=(10,5))
 
+		total_rewards = []
+		total_rewards_mean = []
+
 		for i, stat in enumerate(stats):
-			name = 'rewards' + str(i) + '.txt' 
+			name = 'new_results/' + 'rewards_' + str(i) + '.txt' 
 			np.savetxt(name, stat.episode_rewards, delimiter=',', fmt='%.8f')
 			rewards = []
 			rewards_mean = []
@@ -324,16 +345,32 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 			        cum_sum = np.cumsum(rewards)
 			        size = len(rewards)
 			        rewards_mean.append(cum_sum[-1] / size)
-			name = 'rewards_mean' + str(i) + '.txt'
+			name = 'new_results/' + 'rewards_mean_' + str(i) + '.txt'
 			np.savetxt(name, rewards_mean, delimiter=',', fmt='%.8f')
 			rewards_smoothed = pd.Series(stat.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
-			plt.plot(rewards_smoothed, label = i)
+			total_rewards.append(rewards)
+			total_rewards_mean.append(rewards_mean)
+			plt.plot(rewards_mean, label = i)
 			plt.xlabel("Episode")
-			plt.ylabel("Episode Reward (Smoothed)")
-			plt.title("Training - Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
-			fig2.savefig('training_reward.png')
+			plt.ylabel("Episode Reward")
+			plt.title("Training - Episode Reward over Time")
+			fig2.savefig('new_results/' + 'training_reward.png')
 
 		plt.legend()
+
+		fig4 = plt.figure(figsize=(10,5))
+		plt.boxplot(total_rewards, showmeans=True, meanline=False)
+		plt.xlabel("Training")
+		plt.ylabel("Rewards")
+		plt.title("Training - Rewards Quartile")
+		fig4.savefig('new_results/' + 'rewards_quartile.png')
+
+		fig5 = plt.figure(figsize=(10,5))
+		plt.boxplot(total_rewards_mean, showmeans=True, meanline=False)
+		plt.xlabel("Training")
+		plt.ylabel("Rewards")
+		plt.title("Training - Rewards Quartile")
+		fig5.savefig('new_results/' + 'rewards_mean_quartile.png')
 
 		if noshow:
 			plt.close(fig2)
@@ -343,14 +380,14 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 		fig3 = plt.figure(figsize=(10,5))
 
 		for i, stat in enumerate(stats):
-			name = 'loss_' + str(i) + '.txt'
+			name = 'new_results/' + 'loss_' + str(i) + '.txt'
 			np.savetxt(name, stat.episode_loss, delimiter=',', fmt='%.8f')
 			loss_smoothed = pd.Series(stat.episode_loss).rolling(smoothing_window, min_periods=smoothing_window).mean()
-			plt.plot(loss_smoothed, label = i)
+			plt.plot(stat.episode_loss, label = i)
 			plt.xlabel("Episode")
-			plt.ylabel("Episode Loss (Smoothed)")
-			plt.title("Training - Episode Loss over Time (Smoothed over window size {})".format(smoothing_window))
-			fig3.savefig('training_loss.png')
+			plt.ylabel("Episode Loss")
+			plt.title("Training - Episode Loss over Time")
+			fig3.savefig('new_results/' + 'training_loss.png')
 
 		plt.legend()
 
@@ -362,16 +399,31 @@ def plot_episode_stats(stats, title, smoothing_window=10, noshow=False):
 	else:
 		fig2 = plt.figure(figsize=(10,5))
 
+		total_eval_rewards = []
+		total_eval_rewards_mean = []
+		
 		#for i, stat in enumerate(stats):
-		np.savetxt('rew.txt',stats.episode_rewards, delimiter=',', fmt='%.8f')
-		rewards_smoothed = pd.Series(stats.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
-		plt.plot(rewards_smoothed)
+		name = 'new_results/' + 'rewards_evaluation.txt'
+		np.savetxt(name,stats.episode_rewards, delimiter=',', fmt='%.8f')
+		eval_rewards = []
+		eval_rewards_mean = []
+		with open(name,'r') as csvfile:
+		    plots = csv.reader(csvfile)
+		    for row in plots:
+		        eval_rewards.append(float(row[0]))
+		        cum_sum = np.cumsum(eval_rewards)
+		        size = len(eval_rewards)
+		        eval_rewards_mean.append(cum_sum[-1] / size)
+		name = 'new_results/' + 'rewards_evaluation_mean.txt'
+		np.savetxt(name, eval_rewards_mean, delimiter=',', fmt='%.8f')
+		eval_rewards_smoothed = pd.Series(stats.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
+		total_eval_rewards.append(eval_rewards)
+		total_eval_rewards_mean.append(eval_rewards_mean)
+		plt.plot(eval_rewards_mean)
 		plt.xlabel("Episode")
-		plt.ylabel("Episode Reward (Smoothed)")
-		plt.title("Evaluation - Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
-		fig2.savefig('evaluation_reward.png')
-
-		#plt.legend()
+		plt.ylabel("Episode Reward")
+		plt.title("Evaluation - Episode Reward over Time")
+		fig2.savefig('new_results/' + 'evaluation_reward.png')
 
 		if noshow:
 			plt.close(fig2)
@@ -390,12 +442,12 @@ if __name__ == "__main__":
 	
 
 	max_time_per_episode = 200
-	num_episodes = 1000
+	num_episodes = 5000
 	discount_factor = 0.99
 	batch_size = 64
 	tau = 0.001
 
-	train = 1
+	train = 10
 	stats = []
 	actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_space_size))
 	replay_memory = ReplayBuffer(num_episodes)
@@ -420,7 +472,7 @@ if __name__ == "__main__":
 	start_time = time.time()
 	print("Starting at : ", datetime.datetime.now().strftime("%H:%M:%S"))
 
-	evaluation = 1000
+	evaluation = 15000
 	evaluation_stats = EpisodeStats(episode_q_values=np.zeros(evaluation), episode_rewards=np.zeros(evaluation), episode_loss=np.zeros(evaluation))
 	for e in range(evaluation):
 		print("Evaluation phase ",e, " starts....")

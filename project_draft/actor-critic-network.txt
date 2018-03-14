@@ -1,0 +1,120 @@
+# Enter your network definition here.
+# Use Shift+Enter to update the visualization.
+name: "Actor-Critic Network"
+layer {
+  name: "state"
+  type: "Data"
+  top: "data"
+  
+  data_param {
+    source: "input_leveldb"
+    batch_size: 64
+  }
+}
+
+layer {
+  name: "action"
+  type: "Data"
+  top: "action"
+  
+  data_param {
+    source: "input_leveldb"
+    batch_size: 64
+  }
+}
+layer {
+  name: "fc1_critic"
+  type: "InnerProduct"
+  bottom: "data"
+  top: "ip"
+  top: "label"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "concat"
+  type: "Concat"
+  bottom: "ip"
+  bottom: "action"
+  top: "ip2"
+}
+
+layer {
+  name: "fc2_critic"
+  type: "InnerProduct"
+  bottom: "concat"
+  bottom: "ip2"
+  top: "ip3"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+
+layer {
+  name: "fc3_critic"
+  type: "InnerProduct"
+  bottom: "ip3"
+  top: "ip4"
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+
+layer {
+  name: "action_value"
+  type: "InnerProduct"
+  bottom: "ip4"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+layer {
+  name: "fc1_actor"
+  type: "InnerProduct"
+  bottom: "data"
+  top: "ipp1"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+layer {
+  name: "fc2_actor"
+  type: "InnerProduct"
+  bottom: "ipp1"
+  top: "ipp2"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+
+layer {
+  name: "fc3_actor"
+  type: "InnerProduct"
+  bottom: "ipp2"
+  top: "ipp3"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
+
+
+layer {
+  name: "action"
+  type: "InnerProduct"
+  bottom: "ipp3"
+  
+  inner_product_param {
+    num_output: 2
+  }
+}
